@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dheeran — Naidupeta, Khammam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="demo-banner">
+    <span>🎮 DEMO MODE — No real money will be charged. Powered by Supabase.</span>
+  </div>
+
+  <nav class="navbar">
+    <div class="wrap nav-inner">
+      <a href="/" class="logo">Dheeran<span class="dot">.</span> <span class="logo-sub">est. 2012</span></a>
+      <div class="nav-links" id="navLinks">
+        <a href="/" class="active-link">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="tel:+918885621649" class="btn btn-primary btn-sm">📞 Call</a>
+      </div>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="wrap">
+      <span class="tag">Since 2012 · Naidupeta, Khammam</span>
+      <h1>DHEERAN</h1>
+      <div class="sub">Andhra · Chinese · Biryani · North Indian</div>
+      <div class="hero-meta">
+        <span><b>4.6</b> Rating</span>
+        <span><b>₹600</b> for two</span>
+        <span><b>11:30am–10:30pm</b> Daily</span>
+        <span><b>AC & Non-AC</b></span>
+      </div>
+      <div class="hero-ctas">
+        <a href="/menu" class="btn btn-primary">🍽️ Order Now</a>
+        <a href="/dashboard" class="btn btn-ghost">📊 Restaurant Dashboard</a>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:80px 0;">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">How It Works</span>
+        <h2>Order in 5 Steps</h2>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;max-width:1000px;margin:0 auto;">
+        <div class="card" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2.2rem;margin-bottom:10px;">📋</div>
+          <h3 style="font-size:1rem;margin-bottom:6px;">Browse Menu</h3>
+          <p style="color:var(--cream-dim);font-size:0.85rem;">40+ dishes from 6 categories with live prices from Supabase.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2.2rem;margin-bottom:10px;">📍</div>
+          <h3 style="font-size:1rem;margin-bottom:6px;">Set Location</h3>
+          <p style="color:var(--cream-dim);font-size:0.85rem;">Tap 📍 for GPS. See route, distance & ETA on the map.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2.2rem;margin-bottom:10px;">🗺️</div>
+          <h3 style="font-size:1rem;margin-bottom:6px;">See the Route</h3>
+          <p style="color:var(--cream-dim);font-size:0.85rem;">Leaflet + OpenStreetMap + OSRM road routing.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2.2rem;margin-bottom:10px;">💳</div>
+          <h3 style="font-size:1rem;margin-bottom:6px;">Demo Payment</h3>
+          <p style="color:var(--cream-dim);font-size:0.85rem;">Simulated payment — order created only after success.</p>
+        </div>
+        <div class="card" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:2.2rem;margin-bottom:10px;">✅</div>
+          <h3 style="font-size:1rem;margin-bottom:6px;">Confirmed & Tracked</h3>
+          <p style="color:var(--cream-dim);font-size:0.85rem;">Order stored in Supabase. Owner notified via ntfy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:60px 0;background:var(--charcoal-soft);border-top:1px solid var(--line);">
+    <div class="wrap" style="text-align:center;">
+      <span class="eyebrow">Tech Stack</span>
+      <h2 style="margin:12px 0 8px;">Built For Demonstration</h2>
+      <p style="color:var(--cream-dim);max-width:640px;margin:0 auto 24px;">Supabase (PostgreSQL + Realtime) • Leaflet + OpenStreetMap + OSRM • ntfy Push Notifications • Demo Payment System • Full Order Lifecycle</p>
+      <a href="/menu" class="btn btn-primary">🍽️ Start Ordering</a>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <span class="fine">© 2026 Dheeran, Naidupeta. Demo project — no real transactions. Powered by Supabase.</span>
+    </div>
+  </footer>
+
+  <script src="/js/supabase-config.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>

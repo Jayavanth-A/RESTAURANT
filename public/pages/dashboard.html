@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Dheeran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .dash-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:24px;}
+    .dash-tab{padding:8px 14px;border-radius:20px;font-size:0.82rem;font-weight:600;background:var(--board);border:1px solid var(--line);color:var(--cream-dim);cursor:pointer;transition:all var(--transition);}
+    .dash-tab.active{background:var(--chili);color:var(--cream);border-color:var(--chili);}
+    .dash-tab:hover{border-color:var(--chili);}
+    .dash-tab .count{background:rgba(255,255,255,0.2);padding:1px 6px;border-radius:10px;font-size:0.7rem;margin-left:4px;}
+    .order-card{background:var(--charcoal-soft);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;margin-bottom:12px;transition:border-color var(--transition);}
+    .order-card:hover{border-color:rgba(245,236,218,0.22);}
+    .order-card-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;}
+    .order-card-items{margin:12px 0;font-size:0.88rem;color:var(--cream-dim);}
+    .order-card-items div{padding:3px 0;}
+    .order-card-bottom{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center;justify-content:space-between;}
+    .order-card-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:0.82rem;color:var(--cream-dim);margin-top:8px;}
+    .action-btn{padding:6px 14px;border-radius:var(--radius);font-size:0.78rem;font-weight:600;border:none;cursor:pointer;transition:all var(--transition);}
+    .action-btn:hover{transform:translateY(-1px);}
+    .action-accept{background:var(--leaf);color:var(--cream);}
+    .action-prepare{background:var(--mustard);color:var(--charcoal);}
+    .action-ready{background:var(--chili);color:var(--cream);}
+    .action-deliver{background:#6a4fcc;color:var(--cream);}
+    .action-done{background:var(--leaf);color:var(--cream);}
+    .action-cancel{background:transparent;border:1px solid var(--chili);color:var(--chili);}
+    .stat-card{background:var(--board);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;text-align:center;}
+    .stat-card .num{font-size:1.8rem;font-weight:800;color:var(--mustard-bright);font-family:'Bricolage Grotesque',sans-serif;}
+    .stat-card .label{font-size:0.8rem;color:var(--cream-dim);margin-top:4px;}
+    .dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px;}
+  </style>
+</head>
+<body>
+  <div class="demo-banner"><span>🎮 DEMO MODE — Restaurant Owner Dashboard</span></div>
+  <nav class="navbar">
+    <div class="wrap nav-inner">
+      <a href="/" class="logo">Dheeran<span class="dot">.</span> <span class="logo-sub">Dashboard</span></a>
+      <div class="nav-links" id="navLinks"><a href="/">Home</a><a href="/menu">Menu</a><a href="/dashboard" class="active-link">Dashboard</a></div>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  <div class="page-content"><div class="wrap">
+    <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div><span class="eyebrow">Restaurant Owner</span><h1 class="section-title">Order Dashboard</h1><p style="color:var(--cream-dim);font-size:0.85rem;">Orders from Supabase • Auto-refreshes every 10s</p></div>
+      <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">↻ Refresh</button>
+    </div>
+    <div class="dash-stats" id="dashStats"></div>
+    <div class="dash-tabs" id="dashTabs">
+      <button class="dash-tab active" onclick="filterOrders('all',this)">All</button>
+      <button class="dash-tab" onclick="filterOrders('pending',this)">📝 Pending</button>
+      <button class="dash-tab" onclick="filterOrders('accepted',this)">👨‍🍳 Accepted</button>
+      <button class="dash-tab" onclick="filterOrders('preparing',this)">🔥 Preparing</button>
+      <button class="dash-tab" onclick="filterOrders('ready',this)">📦 Ready</button>
+      <button class="dash-tab" onclick="filterOrders('out_for_delivery',this)">🛵 Out</button>
+      <button class="dash-tab" onclick="filterOrders('delivered',this)">✅ Delivered</button>
+      <button class="dash-tab" onclick="filterOrders('cancelled',this)">❌ Cancelled</button>
+    </div>
+    <div id="ordersList"></div>
+    <div id="ordersEmpty" class="empty-state" style="display:none;"><span class="icon">📋</span><p>No orders yet. Customers will appear here after placing orders.</p></div>
+  </div></div>
+  <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
+
+  <script src="/js/supabase-config.js"></script><script src="/js/app.js"></script>
+  <script>
+    let allOrders=[], currentFilter='all', refreshInterval=null;
+    const NEXT_ACTION={pending:{label:'✅ Accept',cls:'action-accept',next:'accepted'},accepted:{label:'🔥 Start Preparing',cls:'action-prepare',next:'preparing'},preparing:{label:'📦 Mark Ready',cls:'action-ready',next:'ready'},ready:{label:'🛵 Out for Delivery',cls:'action-deliver',next:'out_for_delivery'},out_for_delivery:{label:'✅ Delivered',cls:'action-done',next:'delivered'}};
+
+    document.addEventListener('DOMContentLoaded',()=>{loadDashboard();refreshInterval=setInterval(loadDashboard,10000);});
+
+    async function loadDashboard(){
+      try{
+        allOrders=await DB.getOrders(RESTAURANT_ID);
+        const stats=await DB.getDashboardStats(RESTAURANT_ID);
+        renderStats(stats);renderOrders();updateTabCounts();
+      }catch(err){showToast('Failed to load: '+err.message,'error');}
+    }
+
+    function renderStats(s){
+      document.getElementById('dashStats').innerHTML=`
+        <div class="stat-card"><div class="num">${s.totalOrders}</div><div class="label">Total Orders</div></div>
+        <div class="stat-card"><div class="num">${s.paidOrders}</div><div class="label">Paid Orders</div></div>
+        <div class="stat-card"><div class="num">${s.preparingOrders}</div><div class="label">Preparing Now</div></div>
+        <div class="stat-card"><div class="num">${s.deliveredToday}</div><div class="label">Delivered Today</div></div>
+        <div class="stat-card"><div class="num">${formatCurrency(s.revenueToday)}</div><div class="label">Revenue Today</div></div>`;
+    }
+
+    function updateTabCounts(){
+      const c={};allOrders.forEach(o=>{c[o.order_status]=(c[o.order_status]||0)+1;});
+      document.querySelectorAll('.dash-tab').forEach(t=>{
+        const f=t.textContent.includes('All')?'all':t.textContent.trim().toLowerCase().split(' ')[0];
+        const count=f==='all'?allOrders.length:(c[f]||0);
+        const ex=t.querySelector('.count');if(ex)ex.textContent=count;else t.innerHTML+=`<span class="count">${count}</span>`;
+      });
+    }
+
+    function filterOrders(f,btn){currentFilter=f;document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderOrders();}
+
+    function renderOrders(){
+      let orders=allOrders;
+      if(currentFilter!=='all')orders=orders.filter(o=>o.order_status===currentFilter);
+      const c=document.getElementById('ordersList'),e=document.getElementById('ordersEmpty');
+      if(!orders.length){c.innerHTML='';e.style.display='block';return;}e.style.display='none';
+      c.innerHTML=orders.map(order=>{
+        const items=(order.order_items||[]).map(i=>`<div>${i.quantity} × ${i.item_name} — ${formatCurrency(i.subtotal)}</div>`).join('');
+        const action=NEXT_ACTION[order.order_status];
+        const modeIcon=order.delivery_mode==='delivery'?'🛵':order.delivery_mode==='takeaway'?'🛍️':'🪑';
+        return `<div class="order-card">
+          <div class="order-card-top">
+            <div><span style="font-weight:700;">Order #${order.order_number||'—'}</span>
+            <span class="badge badge-${order.payment_status==='paid'?'paid':'pending'}" style="margin-left:8px;">${order.payment_status.toUpperCase()}</span>
+            <span class="badge badge-pending" style="margin-left:4px;">${getOrderStatusEmoji(order.order_status)} ${order.order_status.toUpperCase()}</span></div>
+            <span style="font-weight:700;color:var(--mustard-bright);">${formatCurrency(order.total_amount)}</span>
+          </div>
+          <div class="order-card-items">${items||'<div>No items</div>'}</div>
+          <div class="order-card-meta">
+            <span>👤 ${order.customer_name}</span><span>📞 ${order.customer_phone}</span><span>${modeIcon} ${order.delivery_mode}</span>
+            ${order.distance_km?`<span>📏 ${order.distance_km} km</span>`:''}
+            ${order.estimated_minutes?`<span>⏱️ ~${order.estimated_minutes} min</span>`:''}
+            <span>🕐 ${new Date(order.created_at).toLocaleString()}</span>
+          </div>
+          ${order.delivery_address?`<div style="margin-top:6px;font-size:0.82rem;color:var(--cream-dim);">📍 ${order.delivery_address}</div>`:''}
+          ${order.special_instructions?`<div style="margin-top:4px;font-size:0.82rem;color:var(--mustard-bright);">📝 ${order.special_instructions}</div>`:''}
+          <div class="order-card-bottom">
+            <div></div>
+            <div style="display:flex;gap:6px;">
+              ${action?`<button class="action-btn ${action.cls}" onclick="updateStatus('${order.id}','${action.next}','${order.order_number}','${order.customer_name}',${order.total_amount})">${action.label}</button>`:''}
+              ${order.order_status!=='delivered'&&order.order_status!=='cancelled'?`<button class="action-btn action-cancel" onclick="updateStatus('${order.id}','cancelled','${order.order_number}','${order.customer_name}',${order.total_amount})">Cancel</button>`:''}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function updateStatus(orderId,newStatus,orderNum,custName,totalAmt){
+      try{
+        await DB.updateOrderStatus(orderId,newStatus);
+        showToast(`Order #${orderNum} → ${newStatus}`);
+        // Notify via ntfy (fire and forget)
+        ServerAPI.notifyStatus(orderNum,custName,totalAmt,newStatus).catch(()=>{});
+        await loadDashboard();
+      }catch(err){showToast('Failed: '+err.message,'error');}
+    }
+  </script>
+</body>
+</html>

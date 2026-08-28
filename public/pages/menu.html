@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menu — Dheeran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+  <div class="demo-banner"><span>🎮 DEMO MODE — No real money will be charged.</span></div>
+  <nav class="navbar">
+    <div class="wrap nav-inner">
+      <a href="/" class="logo">Dheeran<span class="dot">.</span></a>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Home</a>
+        <a href="/menu" class="active-link">Menu</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/checkout" class="btn btn-primary btn-sm" id="cartNavBtn" style="position:relative;">🛒 Cart <span id="cartBadge" style="display:none;" class="badge badge-bestseller"></span></a>
+      </div>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    <div class="wrap">
+      <div class="page-header">
+        <span class="eyebrow">On the Board</span>
+        <h1 class="section-title">The Menu</h1>
+        <p class="section-sub">Fresh Andhra spices, Chinese wok mastery, and dum biryanis — all from Supabase.</p>
+      </div>
+      <div id="menuLoading" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--cream-dim);margin-top:12px;">Loading menu from Supabase...</p></div>
+      <div id="menuContent" style="display:none;">
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:24px;">
+          <div style="flex:1;min-width:200px;position:relative;">
+            <span style="position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:0.9rem;pointer-events:none;">🔍</span>
+            <input type="text" class="form-input" id="searchInput" placeholder="Search dishes..." style="padding-left:38px;" autocomplete="off">
+          </div>
+          <div class="tabs" style="margin-bottom:0;gap:6px;">
+            <button class="tab active" onclick="setDiet('all',this)">All</button>
+            <button class="tab" onclick="setDiet('veg',this)">🟢 Veg</button>
+            <button class="tab" onclick="setDiet('nonveg',this)">🔴 Non-Veg</button>
+          </div>
+        </div>
+        <div class="tabs" id="categoryTabs"></div>
+        <div id="menuGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;"></div>
+        <div id="menuEmpty" class="empty-state" style="display:none;"><span class="icon">🔍</span><p>No dishes found.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <a href="/checkout" id="cartFab" style="display:none;position:fixed;bottom:24px;right:24px;z-index:100;width:58px;height:58px;border-radius:50%;background:var(--chili);color:var(--cream);border:none;font-size:1.4rem;box-shadow:0 4px 20px rgba(193,68,45,0.5);align-items:center;justify-content:center;text-decoration:none;">
+    🛒<span id="fabBadge" style="position:absolute;top:-4px;right:-4px;background:var(--mustard);color:var(--charcoal);font-size:0.7rem;font-weight:700;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--charcoal);"></span>
+  </a>
+
+  <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
+
+  <script src="/js/supabase-config.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let menuItems = [];
+    let currentCategory = 'all';
+    let currentDiet = 'all';
+    let searchQuery = '';
+    const EMOJI = { starters:'🍳', mains:'🍛', biryani:'🍚', breads:'🫓', soups:'🥣', beverages:'🥤' };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        menuItems = await DB.getMenu(RESTAURANT_ID);
+        document.getElementById('menuLoading').style.display = 'none';
+        document.getElementById('menuContent').style.display = 'block';
+        renderTabs();
+        renderMenu();
+      } catch (err) {
+        document.getElementById('menuLoading').innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><p>Failed to load menu: ${err.message}</p><p style="color:var(--cream-dim);font-size:0.82rem;margin-top:8px;">Make sure Supabase is configured correctly in supabase-config.js</p></div>`;
+      }
+      document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value.trim().toLowerCase(); renderMenu(); });
+      updateFab();
+    });
+
+    function renderTabs() {
+      const cats = [...new Set(menuItems.map(i => i.category))];
+      document.getElementById('categoryTabs').innerHTML = `<button class="tab active" onclick="setCategory('all',this)">All</button>` + cats.map(c => `<button class="tab" onclick="setCategory('${c}',this)">${EMOJI[c]||'🍽️'} ${c[0].toUpperCase()+c.slice(1)}</button>`).join('');
+    }
+
+    function setCategory(cat, btn) { currentCategory = cat; document.querySelectorAll('#categoryTabs .tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); renderMenu(); }
+    function setDiet(diet, btn) { currentDiet = diet; document.querySelectorAll('.tabs:not(#categoryTabs) .tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); renderMenu(); }
+
+    function renderMenu() {
+      let items = menuItems;
+      if (currentCategory !== 'all') items = items.filter(i => i.category === currentCategory);
+      if (currentDiet !== 'all') items = items.filter(i => i.diet === currentDiet);
+      if (searchQuery) items = items.filter(i => i.name.toLowerCase().includes(searchQuery) || i.description?.toLowerCase().includes(searchQuery));
+
+      const grid = document.getElementById('menuGrid');
+      const empty = document.getElementById('menuEmpty');
+      if (!items.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      items.sort((a,b) => (b.is_bestseller?1:0) - (a.is_bestseller?1:0));
+
+      grid.innerHTML = items.map(item => {
+        const cartItems = Cart.get();
+        const ci = cartItems.find(c => c.menuItemId === item.id);
+        const qty = ci ? ci.quantity : 0;
+        return `<div class="menu-card">
+          <div class="mc-img ${item.diet==='veg'?'mc-veg':'mc-nonveg'}">${EMOJI[item.category]||'🍽️'}</div>
+          <div class="mc-body">
+            <div class="mc-top"><div>
+              <span class="mc-name">${item.name}</span>
+              <span class="badge ${item.diet==='veg'?'badge-veg':'badge-nonveg'}" style="margin-left:6px;">${item.diet==='veg'?'VEG':'NON-VEG'}</span>
+              ${item.is_bestseller?'<span class="badge badge-bestseller" style="margin-left:4px;">⭐ Best</span>':''}
+            </div></div>
+            <div class="mc-desc">${item.description||''}</div>
+            <div class="mc-bottom">
+              <div><span class="mc-price">${formatCurrency(item.price)}</span><span class="mc-time"> · ${item.prep_time_min||10} min</span></div>
+              ${qty===0?`<button class="add-btn" onclick="addToCart('${item.id}')">ADD +</button>`:`<div class="qty-ctrl"><button onclick="changeQty('${item.id}',-1)">−</button><span>${qty}</span><button onclick="changeQty('${item.id}',1)">+</button></div>`}
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function addToCart(itemId) { const item = menuItems.find(i=>i.id===itemId); if(!item) return; Cart.add(item); renderMenu(); updateFab(); showToast(`${item.name} added to cart`); }
+    function changeQty(itemId, delta) { Cart.updateQuantity(itemId, delta); renderMenu(); updateFab(); }
+    function updateFab() { const fab=document.getElementById('cartFab'); const b=document.getElementById('fabBadge'); const c=Cart.getCount(); if(c>0){fab.style.display='flex';b.textContent=c;}else{fab.style.display='none';} }
+  </script>
+</body>
+</html>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout — Dheeran</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    .checkout-section{margin-bottom:28px;}
+    .checkout-section h3{font-size:1.05rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+    .summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:0.9rem;color:var(--cream-dim);}
+    .summary-row.total{font-weight:700;font-size:1.05rem;color:var(--cream);border-top:2px solid var(--line);padding-top:10px;margin-top:6px;}
+    .summary-row.discount{color:var(--leaf);}
+    .payment-options{display:flex;gap:10px;margin:12px 0;}
+    .payment-option{flex:1;padding:16px;border-radius:var(--radius-lg);border:2px solid var(--line);background:var(--board);text-align:center;cursor:pointer;transition:all var(--transition);}
+    .payment-option:hover{border-color:var(--cream-dim);}
+    .payment-option.selected{border-color:var(--chili);background:rgba(193,68,45,0.1);}
+    .payment-option .icon{font-size:1.5rem;margin-bottom:6px;}
+    .payment-option .label{font-size:0.85rem;font-weight:600;}
+    .route-info{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;}
+    .route-stat{display:flex;align-items:center;gap:6px;font-size:0.88rem;}
+    .route-stat b{color:var(--mustard-bright);}
+    .location-input-wrap{display:flex;gap:8px;align-items:stretch;}
+    .location-input-wrap .form-input{flex:1;}
+    .location-btn{display:flex;align-items:center;justify-content:center;width:48px;border-radius:var(--radius);border:2px solid var(--mustard);background:rgba(232,169,59,0.08);color:var(--mustard-bright);font-size:1.3rem;cursor:pointer;transition:all var(--transition);flex-shrink:0;}
+    .location-btn:hover{background:rgba(232,169,59,0.18);}
+    .location-btn.detecting{animation:pulse 1s infinite;}
+    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+    .location-status{font-size:0.82rem;margin-top:6px;display:flex;align-items:center;gap:6px;}
+    .location-status.success{color:var(--leaf);}
+    .location-status.error{color:var(--chili);}
+    .order-mode-select{display:flex;gap:8px;margin-bottom:20px;}
+    .mode-option{flex:1;padding:12px;border-radius:var(--radius);border:2px solid var(--line);background:var(--board);text-align:center;cursor:pointer;transition:all var(--transition);}
+    .mode-option.selected{border-color:var(--chili);background:rgba(193,68,45,0.1);}
+    .mode-option .icon{font-size:1.3rem;}
+    .mode-option .label{font-size:0.82rem;font-weight:600;margin-top:4px;}
+    .delivery-fields{display:none;}
+    .delivery-fields.show{display:block;}
+    .demo-payment-box{background:var(--board);border:2px solid var(--chili);border-radius:var(--radius-lg);padding:24px;text-align:center;margin:20px 0;}
+    .demo-payment-box h3{justify-content:center;margin-bottom:8px;}
+    .pay-btn{padding:16px 40px;font-size:1.1rem;border-radius:var(--radius);background:var(--chili);color:var(--cream);border:none;font-weight:700;cursor:pointer;transition:all var(--transition);}
+    .pay-btn:hover:not(:disabled){background:var(--chili-deep);transform:translateY(-1px);}
+    .pay-btn:disabled{opacity:0.5;cursor:not-allowed;}
+    .processing{display:none;text-align:center;padding:20px;}
+    .processing.active{display:block;}
+  </style>
+</head>
+<body>
+  <div class="demo-banner"><span>🎮 DEMO MODE — No real money will be charged.</span></div>
+  <nav class="navbar">
+    <div class="wrap nav-inner">
+      <a href="/" class="logo">Dheeran<span class="dot">.</span></a>
+      <div class="nav-links" id="navLinks"><a href="/">Home</a><a href="/menu">Menu</a><a href="/dashboard">Dashboard</a></div>
+      <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
+    </div>
+  </nav>
+
+  <div class="page-content"><div class="wrap">
+    <div class="page-header"><a href="/menu" style="color:var(--cream-dim);font-size:0.88rem;">← Back to Menu</a><h1 class="section-title" style="margin-top:8px;">Checkout</h1></div>
+    <div id="emptyCart" class="empty-state" style="display:none;"><span class="icon">🛒</span><p>Your cart is empty.</p><a href="/menu" class="btn btn-primary" style="margin-top:16px;">Browse Menu</a></div>
+    <div id="checkoutContent" class="two-col" style="display:none;">
+      <div>
+        <!-- Order Mode -->
+        <div class="checkout-section">
+          <h3>📦 Order Mode</h3>
+          <div class="order-mode-select">
+            <div class="mode-option" data-mode="delivery" onclick="setMode('delivery',this)"><div class="icon">🛵</div><div class="label">Door Delivery</div></div>
+            <div class="mode-option" data-mode="takeaway" onclick="setMode('takeaway',this)"><div class="icon">🛍️</div><div class="label">Takeaway</div></div>
+            <div class="mode-option" data-mode="dinein" onclick="setMode('dinein',this)"><div class="icon">🪑</div><div class="label">Dine-in</div></div>
+          </div>
+        </div>
+        <!-- Customer Info -->
+        <div class="checkout-section">
+          <h3>👤 Your Details</h3>
+          <div class="form-row">
+            <div class="form-group"><label>Full Name *</label><input type="text" class="form-input" id="custName" placeholder="Rahul Kumar" autocomplete="name"></div>
+            <div class="form-group"><label>Phone Number *</label><input type="tel" class="form-input" id="custPhone" placeholder="+91 98765 43210" autocomplete="tel"></div>
+          </div>
+        </div>
+        <!-- Delivery Location -->
+        <div class="checkout-section delivery-fields" id="deliveryFields">
+          <h3>📍 Delivery Location</h3>
+          <div class="form-group">
+            <label>Delivery Address *</label>
+            <div class="location-input-wrap">
+              <input type="text" class="form-input" id="custAddress" placeholder="Enter your delivery location">
+              <button class="location-btn" id="locationBtn" onclick="detectLocation()" title="Use my current location">📍</button>
+            </div>
+            <div class="location-status" id="locationStatus"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Landmark</label><input type="text" class="form-input" id="custLandmark" placeholder="Near bus stand..."></div>
+            <div class="form-group"><label>Pincode</label><input type="text" class="form-input" id="custPin" placeholder="507306" maxlength="6"></div>
+          </div>
+        </div>
+        <!-- Map -->
+        <div class="checkout-section" id="mapSection" style="display:none;">
+          <h3>🗺️ Route to You</h3>
+          <div style="width:100%;height:300px;border-radius:var(--radius-lg);border:1px solid var(--line);background:var(--board);overflow:hidden;"><div id="map" style="width:100%;height:100%;"></div></div>
+          <div class="route-info" id="routeInfo" style="display:none;">
+            <div class="route-stat">📏 Distance: <b id="routeDistance">—</b></div>
+            <div class="route-stat">⏱️ ETA: <b id="routeETA">—</b></div>
+            <div class="route-stat" id="routeFeeStat">🛵 Fee: <b id="routeFee">—</b></div>
+          </div>
+          <p id="routeError" style="color:var(--chili);font-size:0.85rem;margin-top:8px;display:none;"></p>
+        </div>
+        <!-- Instructions -->
+        <div class="checkout-section">
+          <h3>📝 Instructions (optional)</h3>
+          <textarea class="form-input" id="specialInstructions" placeholder="E.g. no onions, extra spicy..." rows="2"></textarea>
+        </div>
+        <!-- Payment -->
+        <div class="checkout-section">
+          <div class="demo-payment-box">
+            <h3>💳 Demo Payment</h3>
+            <p style="color:var(--cream-dim);font-size:0.85rem;margin-bottom:12px;">This is a simulated payment for demonstration purposes. No real money will be charged.</p>
+            <div class="payment-options">
+              <div class="payment-option selected" data-method="demo_card" onclick="selectPayment('demo_card',this)"><div class="icon">💳</div><div class="label">Demo Card</div></div>
+              <div class="payment-option" data-method="demo_upi" onclick="selectPayment('demo_upi',this)"><div class="icon">📱</div><div class="label">Demo UPI</div></div>
+            </div>
+            <div class="processing" id="processingAnim"><div class="spinner"></div><p style="color:var(--cream-dim);margin-top:12px;">Processing payment...</p></div>
+          </div>
+        </div>
+      </div>
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="card" style="padding:24px;">
+          <h3 style="margin-bottom:16px;">🛒 Order Summary</h3>
+          <div id="summaryItems"></div>
+          <div id="summaryTotals"></div>
+          <button class="btn btn-primary btn-full" id="payBtn" onclick="handlePayment()" style="margin-top:16px;">💳 Pay <span id="payBtnAmount">₹0</span></button>
+          <p style="color:var(--cream-dim);font-size:0.72rem;text-align:center;margin-top:8px;">Demo payment — order created in Supabase after success</p>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
+  <script src="/js/supabase-config.js"></script>
+  <script src="/js/app.js"></script>
+  <script>
+    let deliveryMode='delivery', paymentMethod='demo_card', customerLat=null, customerLng=null;
+    let routeData=null, restaurantData=null, orderId=null;
+    let totalAmount=0, map=null, routeLayer=null, isProcessing=false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const cart=Cart.get();
+      if(!cart.length){document.getElementById('emptyCart').style.display='block';return;}
+      document.getElementById('emptyCart').style.display='none';
+      document.getElementById('checkoutContent').style.display='grid';
+      try{restaurantData=await DB.getRestaurant(RESTAURANT_ID);}catch(e){console.warn('Could not fetch restaurant',e);}
+      setMode('delivery',document.querySelector('[data-mode="delivery"]'));
+      renderSummary();
+    });
+
+    function setMode(mode,el){deliveryMode=mode;document.querySelectorAll('.mode-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');document.getElementById('deliveryFields').classList.toggle('show',mode==='delivery');document.getElementById('mapSection').style.display=mode==='delivery'?'block':'none';renderSummary();if(mode==='delivery'&&customerLat&&customerLng)fetchRoute();}
+
+    function renderSummary(){
+      const cart=Cart.get();
+      document.getElementById('summaryItems').innerHTML=cart.map(i=>`<div class="summary-row"><span>${i.name} × ${i.quantity}</span><span>${formatCurrency(i.price*i.quantity)}</span></div>`).join('');
+      const subtotal=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+      let deliveryFee=deliveryMode==='delivery'?(routeData?routeData.deliveryFee:0):0;
+      const tax=Math.round(subtotal*0.05);
+      totalAmount=subtotal+deliveryFee+tax;
+      document.getElementById('summaryTotals').innerHTML=`
+        <div class="summary-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+        ${deliveryMode==='delivery'?`<div class="summary-row"><span>Delivery Fee</span><span>${formatCurrency(deliveryFee)}</span></div>`:''}
+        <div class="summary-row"><span>Tax (5%)</span><span>${formatCurrency(tax)}</span></div>
+        <div class="summary-row total"><span>Total</span><span>${formatCurrency(totalAmount)}</span></div>`;
+      document.getElementById('payBtnAmount').textContent=formatCurrency(totalAmount);
+    }
+
+    // ===== LOCATION DETECTION =====
+    async function detectLocation(){
+      const btn=document.getElementById('locationBtn');
+      const status=document.getElementById('locationStatus');
+      const addrField=document.getElementById('custAddress');
+      btn.classList.add('detecting');
+      status.className='location-status';status.innerHTML='⏳ Detecting your location...';
+      try{
+        const loc=await getCurrentLocation();
+        customerLat=loc.lat;customerLng=loc.lng;
+        const readable=await reverseGeocode(customerLat,customerLng);
+        addrField.value=readable;
+        status.className='location-status success';status.innerHTML='✓ Current location detected';
+        showToast('📍 Location detected!');
+        initMap();fetchRoute();
+      }catch(err){
+        status.className='location-status error';status.innerHTML=`⚠️ ${err.message}. Please enter your address manually.`;
+      }finally{btn.classList.remove('detecting');}
+    }
+
+    // ===== MAP =====
+    function initMap(){
+      const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
+      if(map){map.setView([customerLat,customerLng],13);return;}
+      map=L.map('map').setView([customerLat||rLat,customerLng||rLng],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
+      L.marker([rLat,rLng],{icon:L.divIcon({className:'',html:'<div style="font-size:1.5rem;">🏪</div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map).bindPopup('<b>Dheeran</b>');
+      if(customerLat&&customerLng){L.marker([customerLat,customerLng],{icon:L.divIcon({className:'',html:'<div style="font-size:1.5rem;">📍</div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map).bindPopup('<b>Your Location</b>');}
+      setTimeout(()=>map.invalidateSize(),200);
+    }
+
+    async function fetchRoute(){
+      if(!customerLat||!customerLng)return;
+      document.getElementById('routeError').style.display='none';
+      try{
+        const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
+        const data=await ServerAPI.getRoute(customerLat,customerLng,rLat,rLng);
+        routeData=data;
+        document.getElementById('routeDistance').textContent=`${data.distanceKm} km`;
+        document.getElementById('routeETA').textContent=`${data.durationMin} min`;
+        document.getElementById('routeFee').textContent=formatCurrency(data.deliveryFee);
+        document.getElementById('routeInfo').style.display='flex';
+        if(map&&data.geometry){if(routeLayer)map.removeLayer(routeLayer);routeLayer=L.geoJSON(data.geometry,{style:{color:'#C1442D',weight:4,opacity:0.85}}).addTo(map);map.fitBounds(routeLayer.getBounds(),{padding:[40,40]});}
+        renderSummary();
+      }catch(err){
+        document.getElementById('routeError').textContent=`⚠️ Route unavailable: ${err.message}`;
+        document.getElementById('routeError').style.display='block';
+      }
+    }
+
+    function selectPayment(method,el){paymentMethod=method;document.querySelectorAll('.payment-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');}
+
+    // ===== PAYMENT & ORDER CREATION =====
+    async function handlePayment(){
+      if(isProcessing)return;
+      const name=document.getElementById('custName').value.trim();
+      const phone=document.getElementById('custPhone').value.trim();
+      if(!name||name.length<2){showToast('Please enter your name','error');return;}
+      if(!phone||phone.length<8){showToast('Please enter a valid phone number','error');return;}
+      const cart=Cart.get();
+      if(!cart.length){showToast('Cart is empty','error');return;}
+      if(deliveryMode==='delivery'&&!customerLat){showToast('Please set your delivery location','error');return;}
+
+      isProcessing=true;
+      const payBtn=document.getElementById('payBtn');
+      const processingAnim=document.getElementById('processingAnim');
+      payBtn.disabled=true;
+      processingAnim.classList.add('active');
+
+      try{
+        // Step 1: Validate cart & calculate totals server-side from Supabase prices
+        const validatedItems=[];
+        let subtotal=0;
+        const sb=getSupabase();
+        for(const item of cart){
+          const {data:menuItem}=await sb.from('menu_items').select('*').eq('id',item.menuItemId).eq('is_available',true).single();
+          if(!menuItem)throw new Error(`Item "${item.name}" is no longer available`);
+          const qty=Math.min(Math.max(item.quantity,1),99);
+          validatedItems.push({menuItemId:menuItem.id,name:menuItem.name,price:menuItem.price,quantity:qty,diet:menuItem.diet});
+          subtotal+=menuItem.price*qty;
+        }
+
+        // Step 2: Calculate delivery
+        let distanceKm=null,estimatedMinutes=null,deliveryFee=0;
+        if(deliveryMode==='delivery'&&customerLat&&customerLng){
+          const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
+          try{const r=await ServerAPI.getRoute(customerLat,customerLng,rLat,rLng);distanceKm=r.distanceKm;estimatedMinutes=r.durationMin;deliveryFee=r.deliveryFee;}catch(e){}
+        }
+        const tax=Math.round(subtotal*0.05);
+        const total=subtotal+deliveryFee+tax;
+
+        // Step 3: Simulate demo payment processing (1-2 second delay)
+        await new Promise(resolve=>setTimeout(resolve,1500));
+        const paymentId=`DEMO_PAY_${Date.now()}_${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+
+        // Step 4: Create order in Supabase ONLY after payment success
+        const order=await DB.createOrder({
+          restaurantId:RESTAURANT_ID,
+          customerName:name,customerPhone:phone,
+          deliveryAddress:document.getElementById('custAddress').value.trim()||null,
+          customerLat,customerLng,
+          deliveryMode,distanceKm,estimatedMinutes,
+          subtotal,deliveryFee,tax,discount:0,totalAmount:total,
+          paymentMethod,paymentId,
+          items:validatedItems,
+          specialInstructions:document.getElementById('specialInstructions').value.trim()||null,
+        });
+
+        // Step 5: Send ntfy notification (fire and forget — don't block confirmation)
+        ServerAPI.notifyOrder({
+          order_number:order.order_number,
+          customer_name:name,customer_phone:phone,
+          items:validatedItems,total_amount:total,
+          delivery_address:document.getElementById('custAddress').value.trim(),
+          distance_km:distanceKm,estimated_minutes:estimatedMinutes,
+        }).catch(e=>console.warn('ntfy failed (order still saved):',e.message));
+
+        // Step 6: Clear cart & redirect
+        Cart.clear();
+        showToast('Payment successful! ✓');
+        window.location.href=`/order/${order.id}`;
+
+      }catch(err){
+        showToast(`Error: ${err.message}`,'error');
+        payBtn.disabled=false;
+        processingAnim.classList.remove('active');
+        isProcessing=false;
+      }
+    }
+  </script>
+</body>
+</html>

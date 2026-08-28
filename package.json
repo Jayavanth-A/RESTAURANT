@@ -1,0 +1,21 @@
+{
+  "name": "dheeran-restaurant",
+  "version": "2.0.0",
+  "description": "Dheeran Restaurant Ordering System — Supabase + Leaflet/OSRM + ntfy + Demo Payment",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["restaurant", "ordering", "supabase", "leaflet", "osrm", "demo-payment"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0"
+  }
+}
