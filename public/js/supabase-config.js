@@ -3,7 +3,7 @@
  * This file MUST load AFTER the Supabase CDN script.
  */
 
-// RESTAURANT_ID — defined early so it's always available
+// RESTAURANT_ID — defined first, always available
 const RESTAURANT_ID = 'dheeran-001';
 
 const SUPABASE_URL = 'https://isamfamwrrtkrfrmewto.supabase.co';
@@ -14,18 +14,15 @@ let _supabaseClient = null;
 function getSupabase() {
   if (_supabaseClient) return _supabaseClient;
 
-  // Try to use the globally loaded Supabase JS library
-  if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
-    _supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return _supabaseClient;
+  if (typeof window !== 'undefined') {
+    // Supabase UMD bundle creates window.supabase with createClient
+    const lib = window.supabase || window.Supabase;
+    if (lib && typeof lib.createClient === 'function') {
+      _supabaseClient = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      return _supabaseClient;
+    }
   }
 
-  // Try alternate global name
-  if (typeof window !== 'undefined' && window.Supabase && typeof window.Supabase.createClient === 'function') {
-    _supabaseClient = window.Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    return _supabaseClient;
-  }
-
-  console.error('Supabase JS library not loaded. Check that the CDN script is included.');
+  console.error('Supabase JS library not loaded. Check CDN script tag.');
   return null;
 }
