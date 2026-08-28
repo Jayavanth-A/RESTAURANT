@@ -7,11 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script>
-    // Fallback: ensure RESTAURANT_ID is always defined
-    if (typeof RESTAURANT_ID === 'undefined') window.RESTAURANT_ID = 'dheeran-001';
-  </script>
 </head>
 <body>
   <div class="demo-banner"><span>🎮 DEMO MODE — No real money will be charged.</span></div>
@@ -33,7 +28,7 @@
       <div class="page-header">
         <span class="eyebrow">On the Board</span>
         <h1 class="section-title">The Menu</h1>
-        <p class="section-sub">Fresh Andhra spices, Chinese wok mastery, and dum biryanis — all from Supabase.</p>
+        <p class="section-sub">Fresh Andhra spices, Chinese wok mastery, and dum biryanis.</p>
       </div>
       <div id="menuLoading" style="text-align:center;padding:40px;"><div class="spinner"></div><p style="color:var(--cream-dim);margin-top:12px;">Loading menu from Supabase...</p></div>
       <div id="menuContent" style="display:none;">
@@ -61,75 +56,193 @@
 
   <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
 
-  <script src="/js/supabase-config.js"></script>
-  <script src="/js/app.js"></script>
+  <!-- Supabase CDN loaded in <head> — then ALL logic inline below -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
+    // ===== CONFIG — everything defined here, no external JS needed =====
+    const RESTAURANT_ID = 'dheeran-001';
+    const SUPABASE_URL = 'https://isamfamwrrtkrfrmewto.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_RXzfAbcFjgoZjBxympcRiw_edz8AUO9';
+    let _sb = null;
+    function getSupabase() {
+      if (_sb) return _sb;
+      const lib = window.supabase || window.Supabase;
+      if (lib && typeof lib.createClient === 'function') {
+        _sb = lib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        return _sb;
+      }
+      return null;
+    }
+
+    // ===== CART =====
+    const Cart = {
+      get() { try { return JSON.parse(localStorage.getItem('dheeran_cart')) || []; } catch { return []; } },
+      save(items) { localStorage.setItem('dheeran_cart', JSON.stringify(items)); },
+      add(item) {
+        const items = this.get();
+        const ex = items.find(i => i.menuItemId === item.id);
+        if (ex) ex.quantity = Math.min(ex.quantity + 1, 99);
+        else items.push({ menuItemId: item.id, name: item.name, price: item.price, diet: item.diet, quantity: 1 });
+        this.save(items);
+        this.updateBadge();
+      },
+      updateQuantity(id, d) {
+        const items = this.get();
+        const i = items.findIndex(x => x.menuItemId === id);
+        if (i === -1) return;
+        items[i].quantity += d;
+        if (items[i].quantity <= 0) items.splice(i, 1);
+        this.save(items);
+        this.updateBadge();
+      },
+      getCount() { return this.get().reduce((s, i) => s + i.quantity, 0); },
+      updateBadge() {
+        const b = document.getElementById('cartBadge');
+        if (!b) return;
+        const c = this.getCount();
+        b.textContent = c;
+        b.style.display = c > 0 ? 'flex' : 'none';
+      }
+    };
+
+    // ===== TOAST =====
+    function showToast(msg, type) {
+      let c = document.getElementById('toastContainer');
+      if (!c) { c = document.createElement('div'); c.id = 'toastContainer'; c.className = 'toast-container'; document.body.appendChild(c); }
+      const t = document.createElement('div');
+      t.className = 'toast ' + (type === 'error' ? 'error' : '');
+      t.innerHTML = '<span>' + (type === 'error' ? '⚠️' : '✓') + '</span> ' + msg;
+      c.appendChild(t);
+      setTimeout(() => { t.classList.add('removing'); setTimeout(() => t.remove(), 300); }, 3000);
+    }
+    function formatCurrency(a) { return '\u20B9' + Math.round(a).toLocaleString('en-IN'); }
+
+    // ===== STATE =====
     let menuItems = [];
     let currentCategory = 'all';
     let currentDiet = 'all';
     let searchQuery = '';
     const EMOJI = { starters:'🍳', mains:'🍛', biryani:'🍚', breads:'🫓', soups:'🥣', beverages:'🥤' };
 
+    // ===== INIT =====
     document.addEventListener('DOMContentLoaded', async () => {
+      Cart.updateBadge();
+      updateFab();
+      document.getElementById('searchInput').addEventListener('input', e => {
+        searchQuery = e.target.value.trim().toLowerCase();
+        renderMenu();
+      });
+
       try {
-        menuItems = await DB.getMenu(RESTAURANT_ID);
+        const sb = getSupabase();
+        if (!sb) throw new Error('Supabase client could not initialize. Check CDN/network.');
+        const { data, error } = await sb.from('menu_items')
+          .select('*')
+          .eq('restaurant_id', RESTAURANT_ID)
+          .eq('is_available', true)
+          .order('is_bestseller', { ascending: false })
+          .order('name');
+        if (error) throw error;
+        menuItems = data || [];
         document.getElementById('menuLoading').style.display = 'none';
         document.getElementById('menuContent').style.display = 'block';
         renderTabs();
         renderMenu();
       } catch (err) {
-        document.getElementById('menuLoading').innerHTML = `<div class="empty-state"><span class="icon">⚠️</span><p>Failed to load menu: ${err.message}</p><p style="color:var(--cream-dim);font-size:0.82rem;margin-top:8px;">Make sure Supabase is configured correctly in supabase-config.js</p></div>`;
+        console.error('Menu load error:', err);
+        document.getElementById('menuLoading').innerHTML =
+          '<div class="empty-state"><span class="icon">⚠️</span>' +
+          '<p>Failed to load menu: ' + err.message + '</p>' +
+          '<p style="color:var(--cream-dim);font-size:0.82rem;margin-top:8px;">Open browser console (F12) for details.</p></div>';
       }
-      document.getElementById('searchInput').addEventListener('input', e => { searchQuery = e.target.value.trim().toLowerCase(); renderMenu(); });
-      updateFab();
     });
 
+    // ===== RENDER =====
     function renderTabs() {
       const cats = [...new Set(menuItems.map(i => i.category))];
-      document.getElementById('categoryTabs').innerHTML = `<button class="tab active" onclick="setCategory('all',this)">All</button>` + cats.map(c => `<button class="tab" onclick="setCategory('${c}',this)">${EMOJI[c]||'🍽️'} ${c[0].toUpperCase()+c.slice(1)}</button>`).join('');
+      document.getElementById('categoryTabs').innerHTML =
+        '<button class="tab active" onclick="setCategory(\'all\',this)">All</button>' +
+        cats.map(c => '<button class="tab" onclick="setCategory(\'' + c + '\',this)">' +
+          (EMOJI[c]||'🍽️') + ' ' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>').join('');
     }
 
-    function setCategory(cat, btn) { currentCategory = cat; document.querySelectorAll('#categoryTabs .tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); renderMenu(); }
-    function setDiet(diet, btn) { currentDiet = diet; document.querySelectorAll('.tabs:not(#categoryTabs) .tab').forEach(t=>t.classList.remove('active')); btn.classList.add('active'); renderMenu(); }
+    function setCategory(cat, btn) {
+      currentCategory = cat;
+      document.querySelectorAll('#categoryTabs .tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderMenu();
+    }
+    function setDiet(diet, btn) {
+      currentDiet = diet;
+      document.querySelectorAll('.tabs:not(#categoryTabs) .tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      renderMenu();
+    }
 
     function renderMenu() {
       let items = menuItems;
       if (currentCategory !== 'all') items = items.filter(i => i.category === currentCategory);
       if (currentDiet !== 'all') items = items.filter(i => i.diet === currentDiet);
-      if (searchQuery) items = items.filter(i => i.name.toLowerCase().includes(searchQuery) || i.description?.toLowerCase().includes(searchQuery));
-
+      if (searchQuery) items = items.filter(i =>
+        i.name.toLowerCase().includes(searchQuery) || (i.description||'').toLowerCase().includes(searchQuery)
+      );
       const grid = document.getElementById('menuGrid');
       const empty = document.getElementById('menuEmpty');
       if (!items.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
-
-      items.sort((a,b) => (b.is_bestseller?1:0) - (a.is_bestseller?1:0));
-
       grid.innerHTML = items.map(item => {
-        const cartItems = Cart.get();
-        const ci = cartItems.find(c => c.menuItemId === item.id);
+        const ci = Cart.get().find(c => c.menuItemId === item.id);
         const qty = ci ? ci.quantity : 0;
-        return `<div class="menu-card">
-          <div class="mc-img ${item.diet==='veg'?'mc-veg':'mc-nonveg'}">${EMOJI[item.category]||'🍽️'}</div>
-          <div class="mc-body">
-            <div class="mc-top"><div>
-              <span class="mc-name">${item.name}</span>
-              <span class="badge ${item.diet==='veg'?'badge-veg':'badge-nonveg'}" style="margin-left:6px;">${item.diet==='veg'?'VEG':'NON-VEG'}</span>
-              ${item.is_bestseller?'<span class="badge badge-bestseller" style="margin-left:4px;">⭐ Best</span>':''}
-            </div></div>
-            <div class="mc-desc">${item.description||''}</div>
-            <div class="mc-bottom">
-              <div><span class="mc-price">${formatCurrency(item.price)}</span><span class="mc-time"> · ${item.prep_time_min||10} min</span></div>
-              ${qty===0?`<button class="add-btn" onclick="addToCart('${item.id}')">ADD +</button>`:`<div class="qty-ctrl"><button onclick="changeQty('${item.id}',-1)">−</button><span>${qty}</span><button onclick="changeQty('${item.id}',1)">+</button></div>`}
-            </div>
-          </div>
-        </div>`;
+        const vegClass = item.diet === 'veg' ? 'mc-veg' : 'mc-nonveg';
+        const dietBadge = item.diet === 'veg' ? 'badge-veg' : 'badge-nonveg';
+        const dietLabel = item.diet === 'veg' ? 'VEG' : 'NON-VEG';
+        const best = item.is_bestseller ? '<span class="badge badge-bestseller" style="margin-left:4px;">⭐ Best</span>' : '';
+        const emoji = EMOJI[item.category] || '🍽️';
+        const prep = item.prep_time_min || 10;
+        let actionBtn;
+        if (qty === 0) {
+          actionBtn = '<button class="add-btn" onclick="addToCart(\'' + item.id + '\')">ADD +</button>';
+        } else {
+          actionBtn = '<div class="qty-ctrl">' +
+            '<button onclick="changeQty(\'' + item.id + '\',-1)">−</button>' +
+            '<span>' + qty + '</span>' +
+            '<button onclick="changeQty(\'' + item.id + '\',1)">+</button></div>';
+        }
+        return '<div class="menu-card">' +
+          '<div class="mc-img ' + vegClass + '">' + emoji + '</div>' +
+          '<div class="mc-body">' +
+          '<div class="mc-top"><div>' +
+          '<span class="mc-name">' + item.name + '</span>' +
+          '<span class="badge ' + dietBadge + '" style="margin-left:6px;">' + dietLabel + '</span>' + best +
+          '</div></div>' +
+          '<div class="mc-desc">' + (item.description || '') + '</div>' +
+          '<div class="mc-bottom"><div>' +
+          '<span class="mc-price">' + formatCurrency(item.price) + '</span>' +
+          '<span class="mc-time"> · ' + prep + ' min</span></div>' +
+          actionBtn +
+          '</div></div></div>';
       }).join('');
     }
 
-    function addToCart(itemId) { const item = menuItems.find(i=>i.id===itemId); if(!item) return; Cart.add(item); renderMenu(); updateFab(); showToast(`${item.name} added to cart`); }
-    function changeQty(itemId, delta) { Cart.updateQuantity(itemId, delta); renderMenu(); updateFab(); }
-    function updateFab() { const fab=document.getElementById('cartFab'); const b=document.getElementById('fabBadge'); const c=Cart.getCount(); if(c>0){fab.style.display='flex';b.textContent=c;}else{fab.style.display='none';} }
+    function addToCart(id) {
+      const item = menuItems.find(i => i.id === id);
+      if (!item) return;
+      Cart.add(item);
+      renderMenu();
+      updateFab();
+      showToast(item.name + ' added to cart');
+    }
+    function changeQty(id, d) {
+      Cart.updateQuantity(id, d);
+      renderMenu();
+      updateFab();
+    }
+    function updateFab() {
+      const f = document.getElementById('cartFab');
+      const b = document.getElementById('fabBadge');
+      const c = Cart.getCount();
+      if (c > 0) { f.style.display = 'flex'; b.textContent = c; } else { f.style.display = 'none'; }
+    }
   </script>
 </body>
 </html>
