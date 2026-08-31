@@ -20,6 +20,9 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for rate limiting behind Railway/nginx
+app.set('trust proxy', 1);
+
 // In production, also serve the old root index.html as fallback
 const fs = require('fs');
 
