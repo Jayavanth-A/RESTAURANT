@@ -308,6 +308,24 @@ select.form-input option { background: var(--board); color: var(--cream); }
 .order-row .order-items div { padding: 3px 0; }
 .order-row .order-bottom { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
+/* ---- CHECKOUT SECTION ---- */
+.checkout-section {
+  background: var(--charcoal-soft); border: 1px solid var(--line); border-radius: var(--radius-lg);
+  padding: 24px; margin-bottom: 16px;
+}
+.checkout-section h3 {
+  font-size: 1.05rem; font-weight: 700; color: var(--cream); margin: 0;
+}
+
+/* ---- MENU GRID ---- */
+.menu-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px; max-width: 900px; margin: 0 auto;
+}
+@media (max-width: 700px) {
+  .menu-grid { grid-template-columns: 1fr; }
+}
+
 /* ---- RESPONSIVE ---- */
 @media (max-width: 800px) {
   .nav-links { display: none; }

@@ -4,307 +4,441 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Checkout — Dheeran</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script>if(typeof RESTAURANT_ID==='undefined')window.RESTAURANT_ID='dheeran-001';</script>
-  <style>
-    .checkout-section{margin-bottom:28px;}
-    .checkout-section h3{font-size:1.05rem;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
-    .summary-row{display:flex;justify-content:space-between;padding:6px 0;font-size:0.9rem;color:var(--cream-dim);}
-    .summary-row.total{font-weight:700;font-size:1.05rem;color:var(--cream);border-top:2px solid var(--line);padding-top:10px;margin-top:6px;}
-    .summary-row.discount{color:var(--leaf);}
-    .payment-options{display:flex;gap:10px;margin:12px 0;}
-    .payment-option{flex:1;padding:16px;border-radius:var(--radius-lg);border:2px solid var(--line);background:var(--board);text-align:center;cursor:pointer;transition:all var(--transition);}
-    .payment-option:hover{border-color:var(--cream-dim);}
-    .payment-option.selected{border-color:var(--chili);background:rgba(193,68,45,0.1);}
-    .payment-option .icon{font-size:1.5rem;margin-bottom:6px;}
-    .payment-option .label{font-size:0.85rem;font-weight:600;}
-    .route-info{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;}
-    .route-stat{display:flex;align-items:center;gap:6px;font-size:0.88rem;}
-    .route-stat b{color:var(--mustard-bright);}
-    .location-input-wrap{display:flex;gap:8px;align-items:stretch;}
-    .location-input-wrap .form-input{flex:1;}
-    .location-btn{display:flex;align-items:center;justify-content:center;width:48px;border-radius:var(--radius);border:2px solid var(--mustard);background:rgba(232,169,59,0.08);color:var(--mustard-bright);font-size:1.3rem;cursor:pointer;transition:all var(--transition);flex-shrink:0;}
-    .location-btn:hover{background:rgba(232,169,59,0.18);}
-    .location-btn.detecting{animation:pulse 1s infinite;}
-    @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
-    .location-status{font-size:0.82rem;margin-top:6px;display:flex;align-items:center;gap:6px;}
-    .location-status.success{color:var(--leaf);}
-    .location-status.error{color:var(--chili);}
-    .order-mode-select{display:flex;gap:8px;margin-bottom:20px;}
-    .mode-option{flex:1;padding:12px;border-radius:var(--radius);border:2px solid var(--line);background:var(--board);text-align:center;cursor:pointer;transition:all var(--transition);}
-    .mode-option.selected{border-color:var(--chili);background:rgba(193,68,45,0.1);}
-    .mode-option .icon{font-size:1.3rem;}
-    .mode-option .label{font-size:0.82rem;font-weight:600;margin-top:4px;}
-    .delivery-fields{display:none;}
-    .delivery-fields.show{display:block;}
-    .demo-payment-box{background:var(--board);border:2px solid var(--chili);border-radius:var(--radius-lg);padding:24px;text-align:center;margin:20px 0;}
-    .demo-payment-box h3{justify-content:center;margin-bottom:8px;}
-    .pay-btn{padding:16px 40px;font-size:1.1rem;border-radius:var(--radius);background:var(--chili);color:var(--cream);border:none;font-weight:700;cursor:pointer;transition:all var(--transition);}
-    .pay-btn:hover:not(:disabled){background:var(--chili-deep);transform:translateY(-1px);}
-    .pay-btn:disabled{opacity:0.5;cursor:not-allowed;}
-    .processing{display:none;text-align:center;padding:20px;}
-    .processing.active{display:block;}
-  </style>
 </head>
 <body>
   <div class="demo-banner"><span>🎮 DEMO MODE — No real money will be charged.</span></div>
   <nav class="navbar">
     <div class="wrap nav-inner">
       <a href="/" class="logo">Dheeran<span class="dot">.</span></a>
-      <div class="nav-links" id="navLinks"><a href="/">Home</a><a href="/menu">Menu</a><a href="/dashboard">Dashboard</a></div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="/checkout" class="btn btn-primary btn-sm active-link">🛒 Checkout</a>
+      </div>
       <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     </div>
   </nav>
 
-  <div class="page-content"><div class="wrap">
-    <div class="page-header"><a href="/menu" style="color:var(--cream-dim);font-size:0.88rem;">← Back to Menu</a><h1 class="section-title" style="margin-top:8px;">Checkout</h1></div>
-    <div id="emptyCart" class="empty-state" style="display:none;"><span class="icon">🛒</span><p>Your cart is empty.</p><a href="/menu" class="btn btn-primary" style="margin-top:16px;">Browse Menu</a></div>
-    <div id="checkoutContent" class="two-col" style="display:none;">
-      <div>
-        <!-- Order Mode -->
+  <div class="page-content">
+    <div class="wrap">
+      <div class="page-header">
+        <span class="eyebrow">Almost There</span>
+        <h1>Checkout</h1>
+      </div>
+
+      <div id="emptyCart" style="display:none;text-align:center;padding:60px 20px;">
+        <div class="empty-state">
+          <span class="icon" style="font-size:3rem;">🛒</span>
+          <p style="color:var(--cream-dim);margin-top:12px;">Your cart is empty.</p>
+          <a href="/menu" class="btn btn-primary" style="margin-top:16px;display:inline-block;">Browse Menu</a>
+        </div>
+      </div>
+
+      <div id="checkoutContent" style="display:none;">
+        <!-- Delivery Mode -->
         <div class="checkout-section">
-          <h3>📦 Order Mode</h3>
-          <div class="order-mode-select">
-            <div class="mode-option" data-mode="delivery" onclick="setMode('delivery',this)"><div class="icon">🛵</div><div class="label">Door Delivery</div></div>
-            <div class="mode-option" data-mode="takeaway" onclick="setMode('takeaway',this)"><div class="icon">🛍️</div><div class="label">Takeaway</div></div>
-            <div class="mode-option" data-mode="dinein" onclick="setMode('dinein',this)"><div class="icon">🪑</div><div class="label">Dine-in</div></div>
+          <h3>Delivery Mode</h3>
+          <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+            <button class="tab active" onclick="setDeliveryMode('delivery',this)" id="modeDelivery">🛵 Door Delivery</button>
+            <button class="tab" onclick="setDeliveryMode('takeaway',this)" id="modeTakeaway">🛍️ Takeaway</button>
+            <button class="tab" onclick="setDeliveryMode('dinein',this)" id="modeDinein">🪑 Dine-in</button>
           </div>
         </div>
+
         <!-- Customer Info -->
         <div class="checkout-section">
-          <h3>👤 Your Details</h3>
-          <div class="form-row">
-            <div class="form-group"><label>Full Name *</label><input type="text" class="form-input" id="custName" placeholder="Rahul Kumar" autocomplete="name"></div>
-            <div class="form-group"><label>Phone Number *</label><input type="tel" class="form-input" id="custPhone" placeholder="+91 98765 43210" autocomplete="tel"></div>
+          <h3>Your Details</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+            <input type="text" id="customerName" placeholder="Full Name *" required style="padding:12px 16px;border-radius:10px;border:1px solid rgba(245,236,218,0.14);background:rgba(46,36,25,0.9);color:var(--cream);font-family:inherit;font-size:0.9rem;">
+            <input type="tel" id="customerPhone" placeholder="Phone Number *" required style="padding:12px 16px;border-radius:10px;border:1px solid rgba(245,236,218,0.14);background:rgba(46,36,25,0.9);color:var(--cream);font-family:inherit;font-size:0.9rem;">
           </div>
         </div>
-        <!-- Delivery Location -->
-        <div class="checkout-section delivery-fields" id="deliveryFields">
-          <h3>📍 Delivery Location</h3>
-          <div class="form-group">
-            <label>Delivery Address *</label>
-            <div class="location-input-wrap">
-              <input type="text" class="form-input" id="custAddress" placeholder="Enter your delivery location">
-              <button class="location-btn" id="locationBtn" onclick="detectLocation()" title="Use my current location">📍</button>
-            </div>
-            <div class="location-status" id="locationStatus"></div>
+
+        <!-- Delivery Address -->
+        <div class="checkout-section" id="addressSection">
+          <h3>Delivery Location</h3>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <input type="text" id="deliveryAddress" placeholder="Enter your delivery location" style="flex:1;padding:12px 16px;border-radius:10px;border:1px solid rgba(245,236,218,0.14);background:rgba(46,36,25,0.9);color:var(--cream);font-family:inherit;font-size:0.9rem;">
+            <button onclick="detectLocation()" id="locationBtn" style="padding:12px 16px;border-radius:10px;border:1px solid rgba(245,236,218,0.14);background:rgba(232,169,59,0.15);color:var(--mustard-bright);cursor:pointer;font-size:1.3rem;" title="Use current location">📍</button>
           </div>
-          <div class="form-row">
-            <div class="form-group"><label>Landmark</label><input type="text" class="form-input" id="custLandmark" placeholder="Near bus stand..."></div>
-            <div class="form-group"><label>Pincode</label><input type="text" class="form-input" id="custPin" placeholder="507306" maxlength="6"></div>
-          </div>
+          <div id="locationStatus" style="margin-top:8px;font-size:0.82rem;color:var(--cream-dim);display:none;"></div>
+          <input type="text" id="specialInstructions" placeholder="Special instructions (optional)" style="width:100%;margin-top:10px;padding:12px 16px;border-radius:10px;border:1px solid rgba(245,236,218,0.14);background:rgba(46,36,25,0.9);color:var(--cream);font-family:inherit;font-size:0.9rem;">
         </div>
+
         <!-- Map -->
         <div class="checkout-section" id="mapSection" style="display:none;">
-          <h3>🗺️ Route to You</h3>
-          <div style="width:100%;height:300px;border-radius:var(--radius-lg);border:1px solid var(--line);background:var(--board);overflow:hidden;"><div id="map" style="width:100%;height:100%;"></div></div>
-          <div class="route-info" id="routeInfo" style="display:none;">
-            <div class="route-stat">📏 Distance: <b id="routeDistance">—</b></div>
-            <div class="route-stat">⏱️ ETA: <b id="routeETA">—</b></div>
-            <div class="route-stat" id="routeFeeStat">🛵 Fee: <b id="routeFee">—</b></div>
+          <h3>Route</h3>
+          <div id="map" style="width:100%;height:300px;border-radius:12px;margin-top:12px;border:1px solid rgba(245,236,218,0.14);"></div>
+          <div id="routeInfo" style="margin-top:12px;display:flex;gap:20px;flex-wrap:wrap;">
+            <div id="routeDistance" style="color:var(--cream-dim);font-size:0.9rem;"></div>
+            <div id="routeETA" style="color:var(--cream-dim);font-size:0.9rem;"></div>
+            <div id="routeFee" style="color:var(--mustard-bright);font-weight:600;font-size:0.9rem;"></div>
           </div>
-          <p id="routeError" style="color:var(--chili);font-size:0.85rem;margin-top:8px;display:none;"></p>
         </div>
-        <!-- Instructions -->
+
+        <!-- Order Summary -->
         <div class="checkout-section">
-          <h3>📝 Instructions (optional)</h3>
-          <textarea class="form-input" id="specialInstructions" placeholder="E.g. no onions, extra spicy..." rows="2"></textarea>
-        </div>
-        <!-- Payment -->
-        <div class="checkout-section">
-          <div class="demo-payment-box">
-            <h3>💳 Demo Payment</h3>
-            <p style="color:var(--cream-dim);font-size:0.85rem;margin-bottom:12px;">This is a simulated payment for demonstration purposes. No real money will be charged.</p>
-            <div class="payment-options">
-              <div class="payment-option selected" data-method="demo_card" onclick="selectPayment('demo_card',this)"><div class="icon">💳</div><div class="label">Demo Card</div></div>
-              <div class="payment-option" data-method="demo_upi" onclick="selectPayment('demo_upi',this)"><div class="icon">📱</div><div class="label">Demo UPI</div></div>
+          <h3>Order Summary</h3>
+          <div id="orderItems" style="margin-top:12px;"></div>
+          <div style="border-top:1px solid rgba(245,236,218,0.14);margin-top:16px;padding-top:16px;">
+            <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:8px;">
+              <span>Subtotal</span><span id="subtotalDisplay">₹0</span>
             </div>
-            <div class="processing" id="processingAnim"><div class="spinner"></div><p style="color:var(--cream-dim);margin-top:12px;">Processing payment...</p></div>
+            <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:8px;" id="deliveryFeeRow">
+              <span>Delivery Fee</span><span id="deliveryFeeDisplay">₹30</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:8px;">
+              <span>Tax (5%)</span><span id="taxDisplay">₹0</span>
+            </div>
+            <div id="discountRow" style="display:none;justify-content:space-between;color:var(--leaf);margin-bottom:8px;">
+              <span>Discount</span><span id="discountDisplay">-₹0</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-size:1.3rem;font-weight:800;margin-top:12px;">
+              <span>Total</span><span id="totalDisplay" style="color:var(--mustard-bright);">₹0</span>
+            </div>
           </div>
         </div>
-      </div>
-      <!-- Sidebar -->
-      <div class="sidebar">
-        <div class="card" style="padding:24px;">
-          <h3 style="margin-bottom:16px;">🛒 Order Summary</h3>
-          <div id="summaryItems"></div>
-          <div id="summaryTotals"></div>
-          <button class="btn btn-primary btn-full" id="payBtn" onclick="handlePayment()" style="margin-top:16px;">💳 Pay <span id="payBtnAmount">₹0</span></button>
-          <p style="color:var(--cream-dim);font-size:0.72rem;text-align:center;margin-top:8px;">Demo payment — order created in Supabase after success</p>
+
+        <!-- Demo Payment -->
+        <div class="checkout-section" style="background:rgba(232,169,59,0.08);border:1px solid rgba(232,169,59,0.2);">
+          <div style="text-align:center;">
+            <span style="font-size:0.8rem;color:var(--mustard-bright);font-weight:600;">🎮 DEMO PAYMENT</span>
+            <p style="color:var(--cream-dim);font-size:0.82rem;margin-top:4px;">This is a simulated payment for demonstration purposes. No real money will be charged.</p>
+          </div>
         </div>
+
+        <!-- Place Order -->
+        <button id="placeOrderBtn" onclick="placeOrder()" class="btn btn-primary" style="width:100%;padding:18px;font-size:1.05rem;margin-top:20px;border-radius:12px;">
+          Pay <span id="payAmount">₹0</span> — Place Order
+        </button>
+
+        <div id="orderError" style="display:none;text-align:center;margin-top:12px;color:var(--chili);font-size:0.88rem;"></div>
       </div>
     </div>
-  </div></div>
+  </div>
 
-  <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
-  <script src="/js/supabase-config.js"></script>
-  <script src="/js/app.js"></script>
-  <script>
-    let deliveryMode='delivery', paymentMethod='demo_card', customerLat=null, customerLng=null;
-    let routeData=null, restaurantData=null, orderId=null;
-    let totalAmount=0, map=null, routeLayer=null, isProcessing=false;
+  <div id="toastContainer" class="toast-container"></div>
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      const cart=Cart.get();
-      if(!cart.length){document.getElementById('emptyCart').style.display='block';return;}
-      document.getElementById('emptyCart').style.display='none';
-      document.getElementById('checkoutContent').style.display='grid';
-      try{restaurantData=await DB.getRestaurant(RESTAURANT_ID);}catch(e){console.warn('Could not fetch restaurant',e);}
-      setMode('delivery',document.querySelector('[data-mode="delivery"]'));
-      renderSummary();
+<script>
+// ===== CONFIG =====
+var SB_URL = 'https://isamfamwrrtkrfrmewto.supabase.co';
+var SB_KEY = 'sb_publishable_RXzfAbcFjgoZjBxympcRiw_edz8AUO9';
+var RESTAURANT_ID = 'dheeran-001';
+var RESTAURANT_LAT = 17.44;
+var RESTAURANT_LNG = 80.16;
+
+// ===== STATE =====
+var deliveryMode = 'delivery';
+var customerLat = null, customerLng = null;
+var deliveryFee = 30;
+var map = null, routeLayer = null;
+var isProcessing = false;
+
+// ===== CART =====
+var Cart = {
+  KEY: 'dheeran_cart',
+  get: function() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch(e) { return []; } },
+  save: function(items) { localStorage.setItem(this.KEY, JSON.stringify(items)); },
+  clear: function() { localStorage.removeItem(this.KEY); },
+  getCount: function() { return this.get().reduce(function(s,i){return s+i.quantity;},0); },
+  getSubtotal: function() { return this.get().reduce(function(s,i){return s+i.price*i.quantity;},0); }
+};
+
+// ===== HELPERS =====
+function formatCurrency(a) { return '₹' + Math.round(a).toLocaleString('en-IN'); }
+function showToast(msg, type) {
+  var c = document.getElementById('toastContainer');
+  var t = document.createElement('div');
+  t.className = 'toast' + (type === 'error' ? ' error' : '');
+  t.innerHTML = '<span>' + (type === 'error' ? '⚠️' : '✓') + '</span> ' + msg;
+  c.appendChild(t);
+  setTimeout(function(){t.classList.add('removing');setTimeout(function(){t.remove();},300);},3000);
+}
+
+function sbQuery(table, params) {
+  return fetch(SB_URL + '/rest/v1/' + table + '?' + params, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' }
+  }).then(function(r) { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+// ===== RENDER =====
+function renderOrderSummary() {
+  var items = Cart.get();
+  if (!items.length) {
+    document.getElementById('emptyCart').style.display = 'block';
+    document.getElementById('checkoutContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('emptyCart').style.display = 'none';
+  document.getElementById('checkoutContent').style.display = 'block';
+
+  var html = '';
+  items.forEach(function(i) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed rgba(245,236,218,0.1);">' +
+      '<div><span style="color:var(--cream);font-weight:500;">' + i.name + '</span> <span style="color:var(--cream-dim);font-size:0.85rem;">× ' + i.quantity + '</span></div>' +
+      '<span style="color:var(--mustard-bright);font-family:\'Kalam\',cursive;font-weight:700;">' + formatCurrency(i.price * i.quantity) + '</span></div>';
+  });
+  document.getElementById('orderItems').innerHTML = html;
+
+  var subtotal = Cart.getSubtotal();
+  var tax = Math.round(subtotal * 0.05);
+  var total = subtotal + deliveryFee + tax;
+
+  document.getElementById('subtotalDisplay').textContent = formatCurrency(subtotal);
+  document.getElementById('deliveryFeeDisplay').textContent = formatCurrency(deliveryFee);
+  document.getElementById('taxDisplay').textContent = formatCurrency(tax);
+  document.getElementById('totalDisplay').textContent = formatCurrency(total);
+  document.getElementById('payAmount').textContent = formatCurrency(total);
+}
+
+function setDeliveryMode(mode, btn) {
+  deliveryMode = mode;
+  document.querySelectorAll('.checkout-section:first-of-type .tab').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  var addrSection = document.getElementById('addressSection');
+  var mapSection = document.getElementById('mapSection');
+  var feeRow = document.getElementById('deliveryFeeRow');
+
+  if (mode === 'delivery') {
+    addrSection.style.display = 'block';
+    mapSection.style.display = customerLat ? 'block' : 'none';
+    deliveryFee = customerLat ? deliveryFee : 30;
+    feeRow.style.display = 'flex';
+  } else if (mode === 'takeaway') {
+    addrSection.style.display = 'none';
+    mapSection.style.display = 'none';
+    deliveryFee = 0;
+    feeRow.style.display = 'none';
+  } else {
+    addrSection.style.display = 'none';
+    mapSection.style.display = 'none';
+    deliveryFee = 0;
+    feeRow.style.display = 'none';
+  }
+  renderOrderSummary();
+}
+
+// ===== GEOLOCATION =====
+async function detectLocation() {
+  var btn = document.getElementById('locationBtn');
+  var status = document.getElementById('locationStatus');
+  btn.textContent = '⏳';
+  status.style.display = 'block';
+  status.innerHTML = '<span style="color:var(--mustard-bright);">⏳</span> Detecting your location...';
+  status.style.color = 'var(--mustard-bright)';
+
+  try {
+    var pos = await new Promise(function(resolve, reject) {
+      if (!navigator.geolocation) return reject(new Error('not supported'));
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+    });
+    customerLat = pos.coords.latitude;
+    customerLng = pos.coords.longitude;
+
+    // Reverse geocode
+    try {
+      var geoRes = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + customerLat + '&lon=' + customerLng + '&format=json');
+      var geoData = await geoRes.json();
+      document.getElementById('deliveryAddress').value = geoData.display_name || (customerLat.toFixed(5) + ', ' + customerLng.toFixed(5));
+    } catch(e) {
+      document.getElementById('deliveryAddress').value = customerLat.toFixed(5) + ', ' + customerLng.toFixed(5);
+    }
+
+    btn.textContent = '✅';
+    status.innerHTML = '<span style="color:var(--leaf);">✓</span> Current location detected';
+    status.style.color = 'var(--leaf)';
+
+    // Show map and route
+    if (deliveryMode === 'delivery') showMap();
+    renderOrderSummary();
+  } catch(err) {
+    btn.textContent = '📍';
+    status.innerHTML = '<span style="color:var(--chili);">⚠️</span> ' + (err.message === 'not supported' ? 'Geolocation not supported by your browser' : 'Location permission denied. Please enter your delivery address manually.');
+    status.style.color = 'var(--chili)';
+  }
+}
+
+// ===== MAP =====
+function showMap() {
+  document.getElementById('mapSection').style.display = 'block';
+  if (!map) {
+    map = L.map('map').setView([RESTAURANT_LAT, RESTAURANT_LNG], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
+    L.marker([RESTAURANT_LAT, RESTAURANT_LNG]).addTo(map).bindPopup('🏠 Dheeran Restaurant').openPopup();
+  }
+  if (customerLat && customerLng) {
+    L.marker([customerLat, customerLng]).addTo(map).bindPopup('📍 Your Location');
+    map.setView([(RESTAURANT_LAT + customerLat) / 2, (RESTAURANT_LNG + customerLng) / 2], 12);
+    fetchRoute();
+  }
+  setTimeout(function(){ map.invalidateSize(); }, 200);
+}
+
+async function fetchRoute() {
+  try {
+    var res = await fetch('/api/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerLat: customerLat, customerLng: customerLng, restaurantLat: RESTAURANT_LAT, restaurantLng: RESTAURANT_LNG })
+    });
+    var data = await res.json();
+
+    document.getElementById('routeDistance').innerHTML = '📏 <b>' + data.distanceKm + ' km</b>';
+    document.getElementById('routeETA').innerHTML = '⏱️ <b>~' + data.durationMin + ' min</b>';
+    document.getElementById('routeFee').innerHTML = '🛵 Delivery fee: <b>' + formatCurrency(data.deliveryFee) + '</b>';
+    deliveryFee = data.deliveryFee;
+
+    if (data.geometry && map) {
+      if (routeLayer) map.removeLayer(routeLayer);
+      routeLayer = L.geoJSON(data.geometry, { style: { color: '#C1442D', weight: 4, opacity: 0.8 } }).addTo(map);
+      map.fitBounds(routeLayer.getBounds(), { padding: [30, 30] });
+    }
+    renderOrderSummary();
+  } catch(err) {
+    console.error('Route error:', err);
+  }
+}
+
+// ===== PLACE ORDER =====
+async function placeOrder() {
+  if (isProcessing) return;
+  var name = document.getElementById('customerName').value.trim();
+  var phone = document.getElementById('customerPhone').value.trim();
+  var items = Cart.get();
+
+  if (!name) return showToast('Please enter your name', 'error');
+  if (!phone) return showToast('Please enter your phone number', 'error');
+  if (!items.length) return showToast('Your cart is empty', 'error');
+
+  var btn = document.getElementById('placeOrderBtn');
+  var errDiv = document.getElementById('orderError');
+  isProcessing = true;
+  btn.textContent = '⏳ Processing...';
+  btn.disabled = true;
+  errDiv.style.display = 'none';
+
+  try {
+    // Step 1: Validate prices from Supabase
+    var ids = items.map(function(i) { return i.menuItemId; });
+    var params = 'id=in.(' + ids.join(',') + ')&select=id,name,price';
+    var serverItems = await sbQuery('menu_items', params);
+
+    var validatedItems = items.map(function(cartItem) {
+      var serverItem = serverItems.find(function(s) { return s.id === cartItem.menuItemId; });
+      return {
+        menuItemId: cartItem.menuItemId,
+        name: serverItem ? serverItem.name : cartItem.name,
+        price: serverItem ? serverItem.price : cartItem.price,
+        quantity: cartItem.quantity
+      };
     });
 
-    function setMode(mode,el){deliveryMode=mode;document.querySelectorAll('.mode-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');document.getElementById('deliveryFields').classList.toggle('show',mode==='delivery');document.getElementById('mapSection').style.display=mode==='delivery'?'block':'none';renderSummary();if(mode==='delivery'&&customerLat&&customerLng)fetchRoute();}
+    var subtotal = validatedItems.reduce(function(s, i) { return s + i.price * i.quantity; }, 0);
+    var tax = Math.round(subtotal * 0.05);
+    var total = subtotal + deliveryFee + tax;
 
-    function renderSummary(){
-      const cart=Cart.get();
-      document.getElementById('summaryItems').innerHTML=cart.map(i=>`<div class="summary-row"><span>${i.name} × ${i.quantity}</span><span>${formatCurrency(i.price*i.quantity)}</span></div>`).join('');
-      const subtotal=cart.reduce((s,i)=>s+i.price*i.quantity,0);
-      let deliveryFee=deliveryMode==='delivery'?(routeData?routeData.deliveryFee:0):0;
-      const tax=Math.round(subtotal*0.05);
-      totalAmount=subtotal+deliveryFee+tax;
-      document.getElementById('summaryTotals').innerHTML=`
-        <div class="summary-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
-        ${deliveryMode==='delivery'?`<div class="summary-row"><span>Delivery Fee</span><span>${formatCurrency(deliveryFee)}</span></div>`:''}
-        <div class="summary-row"><span>Tax (5%)</span><span>${formatCurrency(tax)}</span></div>
-        <div class="summary-row total"><span>Total</span><span>${formatCurrency(totalAmount)}</span></div>`;
-      document.getElementById('payBtnAmount').textContent=formatCurrency(totalAmount);
-    }
+    // Step 2: Demo payment simulation
+    btn.textContent = '💳 Processing demo payment...';
+    await new Promise(function(r) { setTimeout(r, 1500); });
+    var paymentId = 'DEMO_PAY_' + new Date().toISOString().slice(0,10).replace(/-/g,'') + '_' + Math.random().toString(36).substr(2,6).toUpperCase();
 
-    // ===== LOCATION DETECTION =====
-    async function detectLocation(){
-      const btn=document.getElementById('locationBtn');
-      const status=document.getElementById('locationStatus');
-      const addrField=document.getElementById('custAddress');
-      btn.classList.add('detecting');
-      status.className='location-status';status.innerHTML='⏳ Detecting your location...';
-      try{
-        const loc=await getCurrentLocation();
-        customerLat=loc.lat;customerLng=loc.lng;
-        const readable=await reverseGeocode(customerLat,customerLng);
-        addrField.value=readable;
-        status.className='location-status success';status.innerHTML='✓ Current location detected';
-        showToast('📍 Location detected!');
-        initMap();fetchRoute();
-      }catch(err){
-        status.className='location-status error';status.innerHTML=`⚠️ ${err.message}. Please enter your address manually.`;
-      }finally{btn.classList.remove('detecting');}
-    }
+    // Step 3: Create order in Supabase
+    btn.textContent = '📦 Creating order...';
+    var orderData = {
+      restaurant_id: RESTAURANT_ID,
+      customer_name: name,
+      customer_phone: phone,
+      delivery_address: document.getElementById('deliveryAddress').value || null,
+      delivery_latitude: customerLat,
+      delivery_longitude: customerLng,
+      delivery_mode: deliveryMode,
+      distance_km: null,
+      estimated_minutes: null,
+      subtotal: subtotal,
+      delivery_fee: deliveryFee,
+      tax: tax,
+      discount: 0,
+      total_amount: total,
+      payment_status: 'paid',
+      payment_method: 'demo',
+      payment_id: paymentId,
+      order_status: 'pending',
+      special_instructions: document.getElementById('specialInstructions').value || null
+    };
 
-    // ===== MAP =====
-    function initMap(){
-      const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
-      if(map){map.setView([customerLat,customerLng],13);return;}
-      map=L.map('map').setView([customerLat||rLat,customerLng||rLng],13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(map);
-      L.marker([rLat,rLng],{icon:L.divIcon({className:'',html:'<div style="font-size:1.5rem;">🏪</div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map).bindPopup('<b>Dheeran</b>');
-      if(customerLat&&customerLng){L.marker([customerLat,customerLng],{icon:L.divIcon({className:'',html:'<div style="font-size:1.5rem;">📍</div>',iconSize:[30,30],iconAnchor:[15,15]})}).addTo(map).bindPopup('<b>Your Location</b>');}
-      setTimeout(()=>map.invalidateSize(),200);
-    }
+    var orderRes = await fetch(SB_URL + '/rest/v1/orders', {
+      method: 'POST',
+      headers: {
+        'apikey': SB_KEY,
+        'Authorization': 'Bearer ' + SB_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(orderData)
+    });
 
-    async function fetchRoute(){
-      if(!customerLat||!customerLng)return;
-      document.getElementById('routeError').style.display='none';
-      try{
-        const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
-        const data=await ServerAPI.getRoute(customerLat,customerLng,rLat,rLng);
-        routeData=data;
-        document.getElementById('routeDistance').textContent=`${data.distanceKm} km`;
-        document.getElementById('routeETA').textContent=`${data.durationMin} min`;
-        document.getElementById('routeFee').textContent=formatCurrency(data.deliveryFee);
-        document.getElementById('routeInfo').style.display='flex';
-        if(map&&data.geometry){if(routeLayer)map.removeLayer(routeLayer);routeLayer=L.geoJSON(data.geometry,{style:{color:'#C1442D',weight:4,opacity:0.85}}).addTo(map);map.fitBounds(routeLayer.getBounds(),{padding:[40,40]});}
-        renderSummary();
-      }catch(err){
-        document.getElementById('routeError').textContent=`⚠️ Route unavailable: ${err.message}`;
-        document.getElementById('routeError').style.display='block';
-      }
-    }
+    if (!orderRes.ok) throw new Error('Order creation failed: HTTP ' + orderRes.status);
+    var order = await orderRes.json();
+    var orderId = order[0].id;
 
-    function selectPayment(method,el){paymentMethod=method;document.querySelectorAll('.payment-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');}
+    // Step 4: Create order items
+    var orderItems = validatedItems.map(function(i) {
+      return { order_id: orderId, menu_item_id: i.menuItemId, item_name: i.name, quantity: i.quantity, price: i.price, subtotal: i.price * i.quantity };
+    });
+    var itemsRes = await fetch(SB_URL + '/rest/v1/order_items', {
+      method: 'POST',
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderItems)
+    });
+    if (!itemsRes.ok) console.error('Order items insert failed');
 
-    // ===== PAYMENT & ORDER CREATION =====
-    async function handlePayment(){
-      if(isProcessing)return;
-      const name=document.getElementById('custName').value.trim();
-      const phone=document.getElementById('custPhone').value.trim();
-      if(!name||name.length<2){showToast('Please enter your name','error');return;}
-      if(!phone||phone.length<8){showToast('Please enter a valid phone number','error');return;}
-      const cart=Cart.get();
-      if(!cart.length){showToast('Cart is empty','error');return;}
-      if(deliveryMode==='delivery'&&!customerLat){showToast('Please set your delivery location','error');return;}
+    // Step 5: Get order_number for display
+    var orderNumRes = await sbQuery('orders', 'select=order_number&id=eq.' + orderId);
+    var orderNumber = orderNumRes[0] ? orderNumRes[0].order_number : orderId.slice(0,8);
 
-      isProcessing=true;
-      const payBtn=document.getElementById('payBtn');
-      const processingAnim=document.getElementById('processingAnim');
-      payBtn.disabled=true;
-      processingAnim.classList.add('active');
-
-      try{
-        // Step 1: Validate cart & calculate totals server-side from Supabase prices
-        const validatedItems=[];
-        let subtotal=0;
-        const sb=getSupabase();
-        for(const item of cart){
-          const {data:menuItem}=await sb.from('menu_items').select('*').eq('id',item.menuItemId).eq('is_available',true).single();
-          if(!menuItem)throw new Error(`Item "${item.name}" is no longer available`);
-          const qty=Math.min(Math.max(item.quantity,1),99);
-          validatedItems.push({menuItemId:menuItem.id,name:menuItem.name,price:menuItem.price,quantity:qty,diet:menuItem.diet});
-          subtotal+=menuItem.price*qty;
+    // Step 6: Send ntfy notification
+    fetch('/api/ntfy/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order: {
+          order_number: orderNumber,
+          customer_name: name,
+          customer_phone: phone,
+          items: validatedItems.map(function(i) { return { quantity: i.quantity, item_name: i.name }; }),
+          total_amount: total,
+          delivery_address: document.getElementById('deliveryAddress').value || 'N/A',
+          distance_km: null,
+          estimated_minutes: null
         }
+      })
+    }).catch(function(e) { console.warn('ntfy notification failed (non-blocking):', e); });
 
-        // Step 2: Calculate delivery
-        let distanceKm=null,estimatedMinutes=null,deliveryFee=0;
-        if(deliveryMode==='delivery'&&customerLat&&customerLng){
-          const rLat=restaurantData?.latitude||17.44,rLng=restaurantData?.longitude||80.16;
-          try{const r=await ServerAPI.getRoute(customerLat,customerLng,rLat,rLng);distanceKm=r.distanceKm;estimatedMinutes=r.durationMin;deliveryFee=r.deliveryFee;}catch(e){}
-        }
-        const tax=Math.round(subtotal*0.05);
-        const total=subtotal+deliveryFee+tax;
+    // Step 7: Clear cart and redirect
+    Cart.clear();
+    showToast('Order placed successfully!');
+    setTimeout(function() { window.location.href = '/order?id=' + orderId; }, 800);
 
-        // Step 3: Simulate demo payment processing (1-2 second delay)
-        await new Promise(resolve=>setTimeout(resolve,1500));
-        const paymentId=`DEMO_PAY_${Date.now()}_${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+  } catch(err) {
+    console.error('Order error:', err);
+    errDiv.textContent = '❌ Order failed: ' + err.message;
+    errDiv.style.display = 'block';
+    btn.textContent = 'Pay ' + document.getElementById('payAmount').textContent + ' — Place Order';
+    btn.disabled = false;
+    isProcessing = false;
+  }
+}
 
-        // Step 4: Create order in Supabase ONLY after payment success
-        const order=await DB.createOrder({
-          restaurantId:RESTAURANT_ID,
-          customerName:name,customerPhone:phone,
-          deliveryAddress:document.getElementById('custAddress').value.trim()||null,
-          customerLat,customerLng,
-          deliveryMode,distanceKm,estimatedMinutes,
-          subtotal,deliveryFee,tax,discount:0,totalAmount:total,
-          paymentMethod,paymentId,
-          items:validatedItems,
-          specialInstructions:document.getElementById('specialInstructions').value.trim()||null,
-        });
-
-        // Step 5: Send ntfy notification (fire and forget — don't block confirmation)
-        ServerAPI.notifyOrder({
-          order_number:order.order_number,
-          customer_name:name,customer_phone:phone,
-          items:validatedItems,total_amount:total,
-          delivery_address:document.getElementById('custAddress').value.trim(),
-          distance_km:distanceKm,estimated_minutes:estimatedMinutes,
-        }).catch(e=>console.warn('ntfy failed (order still saved):',e.message));
-
-        // Step 6: Clear cart & redirect
-        Cart.clear();
-        showToast('Payment successful! ✓');
-        window.location.href=`/order/${order.id}`;
-
-      }catch(err){
-        showToast(`Error: ${err.message}`,'error');
-        payBtn.disabled=false;
-        processingAnim.classList.remove('active');
-        isProcessing=false;
-      }
-    }
-  </script>
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', function() {
+  renderOrderSummary();
+});
+</script>
 </body>
 </html>

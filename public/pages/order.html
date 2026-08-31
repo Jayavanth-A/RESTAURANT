@@ -3,133 +3,205 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order Confirmed — Dheeran</title>
+  <title>Order Confirmation — Dheeran</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Work+Sans:wght@300;400;500;600&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/main.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script>if(typeof RESTAURANT_ID==='undefined')window.RESTAURANT_ID='dheeran-001';</script>
-  <style>
-    .order-detail-card{background:var(--board);border:1px solid var(--line);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;}
-    .order-detail-card h3{margin-bottom:16px;font-size:1.05rem;}
-    .detail-row{display:flex;justify-content:space-between;padding:6px 0;font-size:0.9rem;border-bottom:1px dashed var(--line);}
-    .detail-row:last-child{border-bottom:none;}
-    .detail-row .label{color:var(--cream-dim);}
-    .detail-row .value{color:var(--cream);font-weight:500;text-align:right;}
-    .success-box{background:var(--board);border:2px solid var(--leaf);border-radius:var(--radius-lg);padding:24px;text-align:center;margin-bottom:24px;}
-    .failed-box{background:var(--board);border:2px solid var(--chili);border-radius:var(--radius-lg);padding:24px;text-align:center;margin-bottom:24px;}
-    .check-circle{width:80px;height:80px;border-radius:50%;background:var(--leaf);display:flex;align-items:center;justify-content:center;font-size:2.4rem;margin:0 auto 16px;animation:popIn 0.5s ease;}
-    @keyframes popIn{0%{transform:scale(0);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
-    .tracker{display:flex;justify-content:space-between;position:relative;padding:20px 0;}
-    .tracker::before{content:'';position:absolute;top:14px;left:40px;right:40px;height:3px;background:var(--line);border-radius:2px;}
-    .tracker-step{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;z-index:1;}
-    .tracker-dot{width:28px;height:28px;border-radius:50%;background:var(--board);border:3px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:0.7rem;}
-    .tracker-step.active .tracker-dot{background:var(--mustard);border-color:var(--mustard);}
-    .tracker-step.done .tracker-dot{background:var(--leaf);border-color:var(--leaf);}
-    .tracker-label{font-size:0.68rem;color:var(--cream-dim);text-align:center;max-width:70px;}
-  </style>
 </head>
 <body>
   <div class="demo-banner"><span>🎮 DEMO MODE — No real money will be charged.</span></div>
   <nav class="navbar">
     <div class="wrap nav-inner">
       <a href="/" class="logo">Dheeran<span class="dot">.</span></a>
-      <div class="nav-links" id="navLinks"><a href="/">Home</a><a href="/menu">Menu</a><a href="/dashboard">Dashboard</a></div>
+      <div class="nav-links" id="navLinks">
+        <a href="/">Home</a>
+        <a href="/menu">Menu</a>
+        <a href="/dashboard">Dashboard</a>
+      </div>
       <button class="nav-toggle" onclick="document.getElementById('navLinks').classList.toggle('open')">☰</button>
     </div>
   </nav>
 
-  <div class="page-content"><div class="wrap" style="max-width:720px;">
-    <div class="page-header"><a href="/menu" style="color:var(--cream-dim);font-size:0.88rem;">← Back to Menu</a></div>
-    <div id="loadingState" style="text-align:center;padding:60px 0;"><div class="spinner"></div><p style="color:var(--cream-dim);margin-top:12px;">Loading order from Supabase...</p></div>
-    <div id="errorState" class="empty-state" style="display:none;"><span class="icon">❌</span><p id="errorMsg">Order not found.</p><a href="/menu" class="btn btn-primary" style="margin-top:16px;">Browse Menu</a></div>
-    <div id="orderContent" style="display:none;">
-      <div id="successHeader" class="success-box"><div class="check-circle">✓</div><h2 style="margin:0 0 4px;">Order Confirmed!</h2><p style="color:var(--cream-dim);">Payment successful. Order stored in Supabase.</p></div>
-      <div id="failedHeader" class="failed-box" style="display:none;"><div style="font-size:3rem;margin-bottom:12px;">❌</div><h2 style="margin:0 0 4px;">Payment Failed</h2><p style="color:var(--cream-dim);">Your order could not be confirmed.</p></div>
-      <div class="order-detail-card"><h3>📋 Order Details</h3><div class="detail-row"><span class="label">Order ID</span><span class="value" id="orderNumber" style="font-weight:700;color:var(--mustard-bright);"></span></div><div class="detail-row"><span class="label">Customer</span><span class="value" id="orderCustomer"></span></div><div class="detail-row"><span class="label">Phone</span><span class="value" id="orderPhone"></span></div><div class="detail-row"><span class="label">Mode</span><span class="value" id="orderMode"></span></div><div class="detail-row" id="orderAddressRow"><span class="label">Delivery Address</span><span class="value" id="orderAddress"></span></div><div class="detail-row"><span class="label">Payment</span><span class="value" id="orderPayment"></span></div><div class="detail-row"><span class="label">Date</span><span class="value" id="orderDate"></span></div></div>
-      <div class="order-detail-card"><h3>🍽️ Items Ordered</h3><div id="orderItems"></div><div id="orderTotals" style="margin-top:12px;"></div></div>
-      <div class="order-detail-card"><h3>📍 Order Status</h3><div class="tracker" id="orderTracker"></div><div id="currentStatus" style="text-align:center;margin-top:8px;"></div></div>
-      <div class="order-detail-card" id="orderMapSection" style="display:none;"><h3>🗺️ Delivery Route</h3><div id="orderMap" style="width:100%;height:250px;border-radius:var(--radius);border:1px solid var(--line);background:var(--board);"></div><div class="route-info" style="margin-top:12px;"><div class="route-stat">📏 Distance: <b id="orderDistance">—</b></div><div class="route-stat">⏱️ ETA: <b id="orderETA">—</b></div></div></div>
-      <div style="text-align:center;margin-top:20px;"><a href="/menu" class="btn btn-primary">🍽️ Order More</a><a href="/dashboard" class="btn btn-ghost" style="margin-left:8px;">📊 Dashboard</a></div>
+  <div class="page-content">
+    <div class="wrap">
+      <div id="orderLoading" style="text-align:center;padding:80px 20px;">
+        <div class="spinner"></div>
+        <p style="color:var(--cream-dim);margin-top:16px;">Loading order details...</p>
+      </div>
+
+      <div id="orderError" style="display:none;text-align:center;padding:80px 20px;">
+        <div class="empty-state">
+          <span class="icon" style="font-size:3rem;">⚠️</span>
+          <p style="color:var(--cream-dim);margin-top:12px;">Order not found or invalid.</p>
+          <a href="/menu" class="btn btn-primary" style="margin-top:16px;display:inline-block;">Back to Menu</a>
+        </div>
+      </div>
+
+      <div id="orderContent" style="display:none;">
+        <!-- Success Header -->
+        <div style="text-align:center;padding:30px 0;">
+          <div style="width:80px;height:80px;border-radius:50%;background:rgba(91,138,90,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2.5rem;">✓</div>
+          <h1 style="color:var(--leaf);margin-bottom:4px;">Order Confirmed!</h1>
+          <p style="color:var(--cream-dim);">Order #<span id="orderNumber">—</span></p>
+          <p style="color:var(--cream-dim);font-size:0.85rem;margin-top:4px;">Payment: <span style="color:var(--leaf);">Demo Payment — PAID ✓</span></p>
+        </div>
+
+        <!-- Status Tracker -->
+        <div style="max-width:600px;margin:0 auto 30px;">
+          <h3 style="margin-bottom:16px;">Order Status</h3>
+          <div id="statusTracker" style="display:flex;justify-content:space-between;position:relative;">
+            <div style="position:absolute;top:16px;left:30px;right:30px;height:3px;background:rgba(245,236,218,0.14);"></div>
+            <div id="statusProgress" style="position:absolute;top:16px;left:30px;height:3px;background:var(--leaf);transition:width 0.5s;width:0%;"></div>
+          </div>
+        </div>
+
+        <!-- Order Details -->
+        <div style="max-width:600px;margin:0 auto;">
+          <div class="checkout-section">
+            <h3>Order Items</h3>
+            <div id="orderItemsList" style="margin-top:12px;"></div>
+            <div style="border-top:1px solid rgba(245,236,218,0.14);margin-top:16px;padding-top:16px;">
+              <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:6px;"><span>Subtotal</span><span id="orderSubtotal">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:6px;"><span>Delivery Fee</span><span id="orderDeliveryFee">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;color:var(--cream-dim);margin-bottom:6px;"><span>Tax</span><span id="orderTax">₹0</span></div>
+              <div style="display:flex;justify-content:space-between;font-family:'Bricolage Grotesque',sans-serif;font-size:1.3rem;font-weight:800;margin-top:10px;">
+                <span>Total</span><span id="orderTotal" style="color:var(--mustard-bright);">₹0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="checkout-section">
+            <h3>Customer Details</h3>
+            <div style="margin-top:12px;color:var(--cream-dim);">
+              <p>👤 <span id="orderCustomerName" style="color:var(--cream);">—</span></p>
+              <p style="margin-top:6px;">📞 <span id="orderCustomerPhone" style="color:var(--cream);">—</span></p>
+              <p style="margin-top:6px;">📍 <span id="orderDeliveryAddress" style="color:var(--cream);">—</span></p>
+            </div>
+          </div>
+
+          <div class="checkout-section" id="orderMapSection" style="display:none;">
+            <h3>Route Map</h3>
+            <div id="orderMap" style="width:100%;height:250px;border-radius:12px;margin-top:12px;border:1px solid rgba(245,236,218,0.14);"></div>
+          </div>
+
+          <div style="text-align:center;padding:20px 0;">
+            <a href="/menu" class="btn btn-primary" style="display:inline-block;margin:8px;">Order More</a>
+            <a href="/dashboard" class="btn btn-ghost" style="display:inline-block;margin:8px;">View Dashboard</a>
+          </div>
+        </div>
+      </div>
     </div>
-  </div></div>
-  <footer class="site-footer"><div class="wrap"><span class="fine">© 2026 Dheeran. Demo — no real transactions.</span></div></footer>
-  <script src="/js/supabase-config.js"></script><script src="/js/app.js"></script>
-  <script>
-    const STEPS=['pending','accepted','preparing','ready','out_for_delivery','delivered'];
-    const LABELS={pending:'Pending',accepted:'Accepted',preparing:'Preparing',ready:'Ready',out_for_delivery:'On the Way',delivered:'Delivered'};
-    let orderMap=null;
+  </div>
 
-    document.addEventListener('DOMContentLoaded', async () => {
-      const orderId=window.location.pathname.split('/order/')[1];
-      if(!orderId){showError('No order ID.');return;}
-      await loadOrder(orderId);
-      setInterval(()=>loadOrder(orderId),10000);
+<script>
+var SB_URL = 'https://isamfamwrrtkrfrmewto.supabase.co';
+var SB_KEY = 'sb_publishable_RXzfAbcFjgoZjBxympcRiw_edz8AUO9';
+var RESTAURANT_LAT = 17.44, RESTAURANT_LNG = 80.16;
+var STATUSES = ['pending','accepted','preparing','ready','out_for_delivery','delivered'];
+var STATUS_LABELS = { pending:'Placed', accepted:'Accepted', preparing:'Preparing', ready:'Ready', out_for_delivery:'On the Way', delivered:'Delivered' };
+var STATUS_EMOJI = { pending:'📝', accepted:'👨‍🍳', preparing:'🔥', ready:'📦', out_for_delivery:'🛵', delivered:'✅' };
+
+function sbQuery(table, params) {
+  return fetch(SB_URL + '/rest/v1/' + table + '?' + params, {
+    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY }
+  }).then(function(r) { if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); });
+}
+
+function formatCurrency(a) { return '₹' + Math.round(a).toLocaleString('en-IN'); }
+
+async function loadOrder() {
+  var orderId = new URLSearchParams(window.location.search).get('id');
+  if (!orderId) {
+    document.getElementById('orderLoading').style.display = 'none';
+    document.getElementById('orderError').style.display = 'block';
+    return;
+  }
+  try {
+    var orders = await sbQuery('orders', 'select=*&id=eq.' + orderId);
+    if (!orders.length) throw new Error('Not found');
+    var order = orders[0];
+
+    var items = await sbQuery('order_items', 'select=*&order_id=eq.' + orderId);
+
+    document.getElementById('orderLoading').style.display = 'none';
+    document.getElementById('orderContent').style.display = 'block';
+
+    document.getElementById('orderNumber').textContent = order.order_number || orderId.slice(0,8);
+    document.getElementById('orderCustomerName').textContent = order.customer_name;
+    document.getElementById('orderCustomerPhone').textContent = order.customer_phone;
+    document.getElementById('orderDeliveryAddress').textContent = order.delivery_address || 'N/A';
+
+    // Items
+    var html = '';
+    items.forEach(function(i) {
+      html += '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(245,236,218,0.1);">' +
+        '<span style="color:var(--cream);">' + i.item_name + ' × ' + i.quantity + '</span>' +
+        '<span style="color:var(--mustard-bright);font-family:\'Kalam\',cursive;">' + formatCurrency(i.subtotal) + '</span></div>';
     });
+    document.getElementById('orderItemsList').innerHTML = html;
+    document.getElementById('orderSubtotal').textContent = formatCurrency(order.subtotal);
+    document.getElementById('orderDeliveryFee').textContent = formatCurrency(order.delivery_fee);
+    document.getElementById('orderTax').textContent = formatCurrency(order.tax);
+    document.getElementById('orderTotal').textContent = formatCurrency(order.total_amount);
 
-    async function loadOrder(orderId){
-      try{
-        const order=await DB.getOrder(orderId);
-        renderOrder(order);
-      }catch(err){showError(err.message);}
+    // Status tracker
+    renderStatusTracker(order.order_status);
+
+    // Map if delivery
+    if (order.delivery_latitude && order.delivery_longitude && order.delivery_mode === 'delivery') {
+      document.getElementById('orderMapSection').style.display = 'block';
+      setTimeout(function() {
+        var oMap = L.map('orderMap').setView([RESTAURANT_LAT, RESTAURANT_LNG], 12);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(oMap);
+        L.marker([RESTAURANT_LAT, RESTAURANT_LNG]).addTo(oMap).bindPopup('🏠 Dheeran');
+        L.marker([order.delivery_latitude, order.delivery_longitude]).addTo(oMap).bindPopup('📍 Delivery');
+        fetch('/api/route', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerLat: order.delivery_latitude, customerLng: order.delivery_longitude, restaurantLat: RESTAURANT_LAT, restaurantLng: RESTAURANT_LNG })
+        }).then(function(r){return r.json();}).then(function(data) {
+          if (data.geometry) L.geoJSON(data.geometry, { style: { color:'#C1442D', weight:4, opacity:0.8 } }).addTo(oMap);
+          oMap.fitBounds(L.latLngBounds([[RESTAURANT_LAT,RESTAURANT_LNG],[order.delivery_latitude,order.delivery_longitude]]), { padding:[30,30] });
+        }).catch(function(){oMap.invalidateSize();});
+      }, 300);
     }
 
-    function showError(msg){document.getElementById('loadingState').style.display='none';document.getElementById('errorState').style.display='block';document.getElementById('errorMsg').textContent=msg;}
+    // Poll status every 10s
+    setInterval(async function() {
+      try {
+        var refreshed = await sbQuery('orders', 'select=order_status&id=eq.' + orderId);
+        if (refreshed.length) renderStatusTracker(refreshed[0].order_status);
+      } catch(e) {}
+    }, 10000);
 
-    function renderOrder(order){
-      document.getElementById('loadingState').style.display='none';
-      document.getElementById('orderContent').style.display='block';
-      const isPaid=order.payment_status==='paid'&&order.order_status!=='cancelled';
-      document.getElementById('successHeader').style.display=isPaid?'block':'none';
-      document.getElementById('failedHeader').style.display=isPaid?'none':'block';
-      document.getElementById('orderNumber').textContent=`#${order.order_number}`;
-      document.getElementById('orderCustomer').textContent=order.customer_name;
-      document.getElementById('orderPhone').textContent=order.customer_phone;
-      document.getElementById('orderMode').textContent=order.delivery_mode==='delivery'?'🛵 Door Delivery':order.delivery_mode==='takeaway'?'🛍️ Takeaway':'🪑 Dine-in';
-      if(order.delivery_mode==='delivery'&&order.delivery_address){document.getElementById('orderAddressRow').style.display='flex';document.getElementById('orderAddress').textContent=order.delivery_address;}else{document.getElementById('orderAddressRow').style.display='none';}
-      document.getElementById('orderPayment').innerHTML=`<span class="badge badge-${order.payment_status==='paid'?'paid':'pending'}">${order.payment_status.toUpperCase()}</span>`;
-      document.getElementById('orderDate').textContent=new Date(order.created_at).toLocaleString();
+  } catch(err) {
+    document.getElementById('orderLoading').style.display = 'none';
+    document.getElementById('orderError').style.display = 'block';
+  }
+}
 
-      document.getElementById('orderItems').innerHTML=(order.items||[]).map(i=>`<div class="summary-row"><span>${i.item_name} × ${i.quantity}</span><span>${formatCurrency(i.subtotal)}</span></div>`).join('');
-      document.getElementById('orderTotals').innerHTML=`
-        <div class="summary-row"><span>Subtotal</span><span>${formatCurrency(order.subtotal)}</span></div>
-        ${order.delivery_fee>0?`<div class="summary-row"><span>Delivery</span><span>${formatCurrency(order.delivery_fee)}</span></div>`:''}
-        <div class="summary-row"><span>Tax</span><span>${formatCurrency(order.tax)}</span></div>
-        ${order.discount>0?`<div class="summary-row" style="color:var(--leaf);"><span>Discount</span><span>-${formatCurrency(order.discount)}</span></div>`:''}
-        <div class="summary-row total"><span>Total</span><span>${formatCurrency(order.total_amount)}</span></div>`;
+function renderStatusTracker(currentStatus) {
+  var currentIdx = STATUSES.indexOf(currentStatus);
+  if (currentIdx === -1) currentIdx = 0;
+  var progress = document.getElementById('statusProgress');
+  progress.style.width = (currentIdx / (STATUSES.length - 1) * 100) + '%';
 
-      renderTracker(order.order_status);
+  var html = '';
+  STATUSES.forEach(function(s, i) {
+    var active = i <= currentIdx;
+    var isCurrent = i === currentIdx;
+    html += '<div style="text-align:center;position:relative;z-index:1;">' +
+      '<div style="width:32px;height:32px;border-radius:50%;background:' + (active ? 'var(--leaf)' : 'rgba(245,236,218,0.14)') + ';display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:0.85rem;border:2px solid ' + (isCurrent ? 'var(--mustard-bright)' : 'transparent') + ';">' +
+      STATUS_EMOJI[s] + '</div>' +
+      '<span style="font-size:0.72rem;color:' + (active ? 'var(--cream)' : 'var(--cream-dim)') + ';font-weight:' + (isCurrent ? '700' : '400') + ';">' + STATUS_LABELS[s] + '</span></div>';
+  });
+  document.getElementById('statusTracker').innerHTML = '<div style="position:absolute;top:16px;left:30px;right:30px;height:3px;background:rgba(245,236,218,0.14);"></div>' +
+    '<div id="statusProgress" style="position:absolute;top:16px;left:30px;height:3px;background:var(--leaf);transition:width 0.5s;width:' + (currentIdx / (STATUSES.length - 1) * 100) + '%;"></div>' + html;
+}
 
-      if(order.delivery_mode==='delivery'&&order.delivery_latitude&&order.delivery_longitude){
-        document.getElementById('orderMapSection').style.display='block';
-        document.getElementById('orderDistance').textContent=order.distance_km?`${order.distance_km} km`:'—';
-        document.getElementById('orderETA').textContent=order.estimated_minutes?`~${order.estimated_minutes} min`:'—';
-        renderOrderMap(order);
-      }
-    }
-
-    function renderTracker(status){
-      const c=document.getElementById('orderTracker');
-      const s=document.getElementById('currentStatus');
-      if(status==='cancelled'){c.innerHTML='<div style="text-align:center;color:var(--chili);width:100%;">❌ Order Cancelled</div>';s.innerHTML=`<span style="color:var(--chili);font-weight:600;">❌ Cancelled</span>`;return;}
-      const idx=STEPS.indexOf(status);
-      c.innerHTML=STEPS.map((step,i)=>`<div class="tracker-step ${i<idx?'done':i===idx?'active':''}"><div class="tracker-dot">${i<idx?'✓':getOrderStatusEmoji(step)}</div><div class="tracker-label">${LABELS[step]}</div></div>`).join('');
-      s.innerHTML=`<span style="font-weight:600;">${getOrderStatusEmoji(status)} ${LABELS[status]||status.toUpperCase()}</span>`;
-    }
-
-    function renderOrderMap(order){
-      if(!order.delivery_latitude||!order.delivery_longitude)return;
-      if(orderMap){orderMap.setView([order.delivery_latitude,order.delivery_longitude],13);return;}
-      const rLat=17.44,rLng=80.16;
-      orderMap=L.map('orderMap').setView([order.delivery_latitude,order.delivery_longitude],13);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:19}).addTo(orderMap);
-      L.marker([rLat,rLng],{icon:L.divIcon({className:'',html:'<div style="font-size:1.3rem;">🏪</div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(orderMap);
-      L.marker([order.delivery_latitude,order.delivery_longitude],{icon:L.divIcon({className:'',html:'<div style="font-size:1.3rem;">📍</div>',iconSize:[24,24],iconAnchor:[12,12]})}).addTo(orderMap);
-      ServerAPI.getRoute(order.delivery_latitude,order.delivery_longitude,rLat,rLng).then(data=>{if(data.geometry)L.geoJSON(data.geometry,{style:{color:'#C1442D',weight:3,opacity:0.8}}).addTo(orderMap);}).catch(()=>{});
-      setTimeout(()=>orderMap.invalidateSize(),200);
-    }
-  </script>
+document.addEventListener('DOMContentLoaded', loadOrder);
+</script>
 </body>
 </html>
