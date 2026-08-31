@@ -42,6 +42,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.tile.openstreetmap.org", "https://*.supabase.co", "https://unpkg.com", "https://cdn.jsdelivr.net"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       connectSrc: ["'self'", "https://*.tile.openstreetmap.org", "https://*.supabase.co", "https://ntfy.sh", "http://router.project-osrm.org", "https://router.project-osrm.org", "https://nominatim.openstreetmap.org"],
     },
   },
